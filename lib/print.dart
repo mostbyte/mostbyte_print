@@ -1,6 +1,6 @@
 library print;
 
-import 'package:pos_printer_manager/pos_printer_manager.dart';
+import './pos_manager.dart';
 import './utils/service.dart';
 import 'package:webcontent_converter/webcontent_converter.dart';
 

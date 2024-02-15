@@ -6,7 +6,7 @@ import FlutterMacOS
 import Foundation
 
 import blue_thermal_printer
-import network_info_plus_macos
+import network_info_plus
 import path_provider_foundation
 import printing
 

@@ -10,8 +10,15 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  pos_printer_manager: ^0.0.5
   webcontent_converter: ^0.0.8+3
+  esc_pos_utils_plus: ^2.0.1+6
+  blue_thermal_printer: ^1.2.3          
+  network_info_plus: ^4.0.2
+  easy_logger: ^0.0.2
+  printing: ^5.11.0
+  win32: ^5.0.7
+  ffi: ^2.1.0
+  flutter_usb_printer:  ^0.1.0
 
 dev_dependencies:
   flutter_test:
