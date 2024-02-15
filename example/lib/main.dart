@@ -48,7 +48,7 @@ class _MyHomePageState extends State<MyHomePage> {
       appBar: AppBar(),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
-          var print = Print(
+          var print = MostbytePrint(
             ip: "192.168.5.155",
             name: "kassa",
           );

@@ -5,12 +5,12 @@ import './utils/service.dart';
 import 'package:webcontent_converter/webcontent_converter.dart';
 
 /// A Calculator.
-class Print {
+class MostbytePrint {
   PaperSize paperSize;
   String ip;
   String name;
   CapabilityProfile? profile;
-  Print(
+  MostbytePrint(
       {required this.ip,
       required this.name,
       this.paperSize = PaperSize.mm80,
