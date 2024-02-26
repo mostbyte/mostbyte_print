@@ -24,7 +24,7 @@ class MostbytePrint {
       type: 0,
     );
     var paperSize = PaperSize.mm80;
-    profile = await CapabilityProfile.load(name: "default");
+    profile = await CapabilityProfile.load();
     NetworkPrinterManager manager =
         NetworkPrinterManager(networkPrinter, paperSize, profile!);
     await manager.connect();
@@ -43,6 +43,6 @@ class MostbytePrint {
 
       return false;
     }
-    manager.disconnect();
+    // manager.disconnect();
   }
 }

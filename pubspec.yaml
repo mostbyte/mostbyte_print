@@ -1,5 +1,5 @@
 name: mostbyte_print
-description: Package for printing recipt by ethernet interface without driver
+description: Package for printing reciept by ethernet interface without driver
 version: 0.0.1
 homepage: https://github.com/mostbyte/mostbyte_print.git
 publish_to: none
@@ -11,12 +11,12 @@ dependencies:
   flutter:
     sdk: flutter
   webcontent_converter: ^0.0.8+3
-  esc_pos_utils_plus: 
-    path: ./package/esc_pos_utils_plus/
   blue_thermal_printer: ^1.2.3          
   network_info_plus: ^4.0.2
   easy_logger: ^0.0.2
-  printing: ^5.11.0
+  # printing: ^5.11.0
+  image: ^4.1.7
+  html: ^0.15.4
   win32: ^5.0.7
   ffi: ^2.0.1
   flutter_usb_printer:  ^0.1.0
@@ -25,5 +25,7 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^2.0.0
+  
 flutter:
- 
+  assets:
+    - packages/mostbyte_print/esc_pos/resources/capabilities.json
