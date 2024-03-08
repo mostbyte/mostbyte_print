@@ -2,7 +2,7 @@ import 'dart:ffi';
 import 'dart:io';
 import 'dart:typed_data';
 import 'package:ffi/ffi.dart';
-import 'package:flutter_usb_printer/flutter_usb_printer.dart';
+// import 'package:flutter_usb_printer/flutter_usb_printer.dart';
 import '../models/usb_printer.dart';
 import 'package:win32/win32.dart';
 import '../models/pos_printer.dart';
@@ -16,7 +16,8 @@ class USBPrinterManager extends PrinterManager {
   Generator? generator;
 
   /// usb_serial
-  var usbPrinter = FlutterUsbPrinter();
+  var usbPrinter = null;
+  // FlutterUsbPrinter();
 
   /// [win32]
   Pointer<IntPtr>? phPrinter = calloc<HANDLE>();

@@ -21,10 +21,9 @@ class MostbytePrint {
       id: ip,
       name: name,
       address: ip,
-      type: 0,
     );
     var paperSize = PaperSize.mm80;
-    profile = await CapabilityProfile.load();
+    profile = await CapabilityProfile.load(name: "XP-N160I");
     NetworkPrinterManager manager =
         NetworkPrinterManager(networkPrinter, paperSize, profile!);
     await manager.connect();
