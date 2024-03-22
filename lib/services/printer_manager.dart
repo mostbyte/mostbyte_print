@@ -1,6 +1,6 @@
-import '../esc_pos/esc_pos_utils_plus.dart';
 import '../enums/connection_response.dart';
 import '../models/pos_printer.dart';
+import '../esc_pos/esc_pos_utils_plus.dart';
 
 abstract class PrinterManager {
   PaperSize? paperSize;

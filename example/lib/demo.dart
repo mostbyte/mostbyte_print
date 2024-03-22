@@ -13,7 +13,7 @@ class Demo {
 
 </head>
 
-<body>
+<body style='background-color: white;'>
     <h1 style='text-align:center'>Test Page</h1>
     <br>
     <br>

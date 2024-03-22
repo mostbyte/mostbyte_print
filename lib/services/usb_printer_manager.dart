@@ -3,7 +3,6 @@ import 'dart:io';
 import 'dart:typed_data';
 import 'package:ffi/ffi.dart';
 // import 'package:flutter_usb_printer/flutter_usb_printer.dart';
-import '../models/usb_printer.dart';
 import 'package:win32/win32.dart';
 import '../models/pos_printer.dart';
 import '../pos_manager.dart';

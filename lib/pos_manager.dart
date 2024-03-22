@@ -5,7 +5,7 @@ export './models/bluetooth_printer.dart';
 export './models/usb_printer.dart';
 export './services/bluetooth_printer_manager.dart';
 export './services/network_printer_manager.dart';
-// export './services/usb_printer_manager.dart';
+export './services/usb_printer_manager.dart';
 export './enums/bluetooth_printer_type.dart';
 export './enums/connection_response.dart';
 export './enums/connection_type.dart';

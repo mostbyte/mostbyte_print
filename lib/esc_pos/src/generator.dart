@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:typed_data' show Uint8List;
 import 'package:flutter/services.dart';
+import 'package:hex/hex.dart';
 import 'package:image/image.dart';
 import '../esc_pos_utils_plus.dart';
 import 'commands.dart';
@@ -578,8 +579,7 @@ class Generator {
 
     invert(image);
     flip(image, direction: FlipDirection.horizontal);
-    final Image imageRotated =
-        copyRotate(image, angle: 270, interpolation: Interpolation.nearest);
+    final Image imageRotated = copyRotate(image, angle: 270);
 
     const int lineHeight = highDensityVertical ? 3 : 1;
     final List<List<int>> blobs = _toColumnFormat(imageRotated, lineHeight * 8);
