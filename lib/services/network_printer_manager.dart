@@ -28,16 +28,17 @@ class NetworkPrinterManager extends PrinterManager {
   }
 
   /// [connect] let you connect to a network printer
+  @override
   Future<ConnectionResponse> connect(
       {Duration? timeout = const Duration(seconds: 5)}) async {
     try {
-      this.socket = await Socket.connect(address, port, timeout: timeout);
-      this.isConnected = true;
-      this.printer.connected = true;
+      socket = await Socket.connect(address, port, timeout: timeout);
+      isConnected = true;
+      printer.connected = true;
       return Future<ConnectionResponse>.value(ConnectionResponse.success);
     } catch (e) {
-      this.isConnected = false;
-      this.printer.connected = false;
+      isConnected = false;
+      printer.connected = false;
       return Future<ConnectionResponse>.value(ConnectionResponse.timeout);
     }
   }
@@ -65,7 +66,7 @@ class NetworkPrinterManager extends PrinterManager {
       if (!isConnected) {
         await connect();
       }
-      print(this.socket);
+      print(socket);
       final chunked = data.chunkBy(1250);
       final stream = Stream<List<int>>.fromIterable(chunked);
       // add chunked stream
@@ -87,7 +88,7 @@ class NetworkPrinterManager extends PrinterManager {
     await socket?.flush();
     socket?.destroy();
     await socket?.close();
-    this.isConnected = false;
+    isConnected = false;
     if (timeout != null) {
       await Future.delayed(timeout, () => null);
     }

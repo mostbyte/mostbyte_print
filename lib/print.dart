@@ -8,7 +8,6 @@ import './pos_manager.dart';
 import './utils/service.dart';
 import 'package:webcontent_converter/webcontent_converter.dart';
 
-/// A Calculator.
 class MostbytePrint {
   PaperSize paperSize;
   String ip;
@@ -19,6 +18,7 @@ class MostbytePrint {
       required this.name,
       this.paperSize = PaperSize.mm80,
       this.profile});
+  NetworkPrinterManager? manager;
 
   connectPrinter({required String printString}) async {
     NetWorkPrinter networkPrinter = NetWorkPrinter(
@@ -28,23 +28,27 @@ class MostbytePrint {
     );
     var paperSize = PaperSize.mm80;
     profile = await CapabilityProfile.load();
-    NetworkPrinterManager manager =
-        NetworkPrinterManager(networkPrinter, paperSize, profile!);
-    await manager.connect();
+    manager = NetworkPrinterManager(networkPrinter, paperSize, profile!);
+    await manager?.connect();
 
-    var _bytes = await WebcontentConverter.contentToImage(
-      content: printString,
-      executablePath: WebViewHelper.executablePath(),
-    );
-    if (manager.isConnected) {
+    if (manager!.isConnected) {
+      var _bytes = await WebcontentConverter.contentToImage(
+        content: printString,
+        executablePath: WebViewHelper.executablePath(),
+      );
       var service = ESCPrinterService(_bytes);
       var data = await service.getBytes();
-      manager.writeBytes(data, isDisconnect: false);
+      manager!.writeBytes(data);
+      // manager.disconnect();
     } else {
-      manager.disconnect();
+      manager!.disconnect();
 
       return false;
     }
     // manager.disconnect();
+  }
+
+  disconnect() {
+    manager?.disconnect();
   }
 }
