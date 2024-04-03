@@ -42,6 +42,10 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
+  TextEditingController ipController =
+      TextEditingController(text: "192.168.5.155");
+  TextEditingController textController =
+      TextEditingController(text: "Test Page");
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -49,15 +53,39 @@ class _MyHomePageState extends State<MyHomePage> {
       floatingActionButton: FloatingActionButton(
         onPressed: () {
           var print = MostbytePrint(
-            ip: "192.168.5.155",
+            ip: ipController.text,
             name: "kassa",
           );
-          String data = Demo.testPage();
+          String data = Demo.testPage(txt: textController.text);
           print.connectPrinter(printString: data);
           // print.disconnect();
         },
         tooltip: 'Increment',
-        child: const Icon(Icons.add),
+        child: const Icon(Icons.print),
+      ),
+      body: Center(
+        child: Container(
+          alignment: Alignment.center,
+          width: 300,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text("Printer ip"),
+              TextField(
+                textAlign: TextAlign.center,
+                controller: ipController,
+              ),
+              SizedBox(
+                height: 50,
+              ),
+              Text("Printed text"),
+              TextField(
+                textAlign: TextAlign.center,
+                controller: textController,
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

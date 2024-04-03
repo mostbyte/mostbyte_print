@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
-import 'package:blue_thermal_printer/blue_thermal_printer.dart' as themal;
+// import 'package:blue_thermal_printer/blue_thermal_printer.dart' as themal;
 import '../models/pos_printer.dart';
 import '../pos_manager.dart';
 import 'bluetooth_service.dart';
@@ -10,7 +10,7 @@ import 'printer_manager.dart';
 /// Bluetooth Printer
 class BluetoothPrinterManager extends PrinterManager {
   Generator? generator;
-  themal.BlueThermalPrinter bluetooth = themal.BlueThermalPrinter.instance;
+  var bluetooth;
   // fblue.FlutterBlue flutterBlue = fblue.FlutterBlue.instance;
   // fblue.BluetoothDevice fbdevice;
 
@@ -46,8 +46,8 @@ class BluetoothPrinterManager extends PrinterManager {
 
       // } else
       if (Platform.isAndroid || Platform.isIOS) {
-        var device = themal.BluetoothDevice(printer.name, printer.address);
-        await bluetooth.connect(device);
+        // var device = themal.BluetoothDevice(printer.name, printer.address);
+        // await bluetooth.connect(device);
       }
 
       this.isConnected = true;

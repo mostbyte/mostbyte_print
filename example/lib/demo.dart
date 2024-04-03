@@ -1,5 +1,5 @@
 class Demo {
-  static String testPage() {
+  static String testPage({String? txt}) {
     return """
 <!DOCTYPE html>
 <html lang="en">
@@ -14,7 +14,7 @@ class Demo {
 </head>
 
 <body style='background-color: white;'>
-    <h1 style='text-align:center'>Test Page</h1>
+    <h1 style='text-align:center'>${txt ?? "Test Page"}</h1>
     <br>
     <br>
 </body>

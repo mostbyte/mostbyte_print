@@ -38,7 +38,7 @@ class ESCPrinterService {
     bytes += generator.imageRaster(_resize);
     bytes += generator.feed(2);
     bytes += generator.cut();
-    bytes += generator.beep();
+    // bytes += generator.beep();
     return bytes;
   }
 }
