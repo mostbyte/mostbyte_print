@@ -109,10 +109,18 @@ packages:
     dependency: transitive
     description:
       name: dio
-      sha256: "7d328c4d898a61efc3cd93655a0955858e29a0aa647f0f9e02d59b3bb275e2e8"
+      sha256: "5598aa796bbf4699afd5c67c0f5f6e2ed542afc956884b9cd58c306966efc260"
       url: "https://pub.dev"
     source: hosted
-    version: "4.0.6"
+    version: "5.7.0"
+  dio_web_adapter:
+    dependency: transitive
+    description:
+      name: dio_web_adapter
+      sha256: "36c5b2d79eb17cdae41e974b7a8284fec631651d2a6f39a8a2ff22327e90aeac"
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.0.1"
   easy_logger:
     dependency: transitive
     description:
@@ -180,10 +188,10 @@ packages:
     dependency: transitive
     description:
       name: http
-      sha256: "5895291c13fa8a3bd82e76d5627f69e0d85ca6a30dcac95c4ea19a5d555879c2"
+      sha256: a2bbf9d017fcced29139daa8ed2bba4ece450ab222871df93ca9eec6f80c34ba
       url: "https://pub.dev"
     source: hosted
-    version: "0.13.6"
+    version: "1.2.0"
   http_parser:
     dependency: transitive
     description:
@@ -379,10 +387,10 @@ packages:
     dependency: transitive
     description:
       name: puppeteer
-      sha256: dd49117259867d0ce0de33ddd95628fb70cff94581a6432c08272447b8dd1d27
+      sha256: "59e723cc5b69537159a7c34efd645dc08a6a1ac4647d7d7823606802c0f93cdb"
       url: "https://pub.dev"
     source: hosted
-    version: "2.24.0"
+    version: "3.2.0"
   sky_engine:
     dependency: transitive
     description: flutter
@@ -464,10 +472,10 @@ packages:
     dependency: transitive
     description:
       name: webcontent_converter
-      sha256: "4c554be37a56fc8b5d5d70ee78ffe902bb7126ecd036e204c19f3cc05d417850"
+      sha256: dab8a6abda92eb83e168d92a66f1b174f7e8c317351e6cc868440a1c1343d5f5
       url: "https://pub.dev"
     source: hosted
-    version: "0.0.8+3"
+    version: "0.0.9+2"
   win32:
     dependency: transitive
     description:

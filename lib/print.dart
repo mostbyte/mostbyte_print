@@ -51,4 +51,19 @@ class MostbytePrint {
   disconnect() {
     manager?.disconnect();
   }
+
+// Static function that will be run in the isolate
+  void isolateEntryPoint(Map<String, dynamic> params) async {
+    var printString = params['printString'];
+    var ip = params['ip'];
+    var name = params['name'];
+
+    var mostbytePrint = MostbytePrint(
+      ip: ip,
+      name: name,
+    );
+
+    await mostbytePrint.connectPrinter(printString: printString);
+    mostbytePrint.disconnect();
+  }
 }

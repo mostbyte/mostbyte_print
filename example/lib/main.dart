@@ -1,8 +1,10 @@
 import 'package:example/demo.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:mostbyte_print/print.dart';
 
 void main() {
+  WidgetsFlutterBinding.ensureInitialized();
   runApp(const MyApp());
 }
 
@@ -42,18 +44,27 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
+  Future<void> printInIsolate(String printString) async {
+    // Ensure that you are calling services only from the main isolate
+    // If needed, wrap your isolate function within the `compute` function.
+    var mostbytePrint = MostbytePrint(
+      ip: '192.168.5.155',
+      name: 'kassa',
+    );
+    await mostbytePrint.connectPrinter(printString: printString);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(),
       floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          var print = MostbytePrint(
-            ip: "192.168.5.155",
-            name: "kassa",
-          );
-          String data = Demo.testPage();
-          print.connectPrinter(printString: data);
+        onPressed: () async {
+          // for (var i = 0; i < 40; i++) {
+          String data = Demo.testPage("");
+          // Call the isolate via compute
+          await printInIsolate(data);
+
           // print.disconnect();
         },
         tooltip: 'Increment',
