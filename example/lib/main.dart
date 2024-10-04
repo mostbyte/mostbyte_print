@@ -50,7 +50,23 @@ class _MyHomePageState extends State<MyHomePage> {
       ip: '192.168.5.155',
       name: 'kassa',
     );
-    await mostbytePrint.connectPrinter(printString: printString);
+    var sss = await mostbytePrint.testTicket();
+    var ticket = await mostbytePrint.generateReciept(
+        orderId: 3,
+        comment: "Бар",
+        employee: "Surayyo",
+        time: DateTime.now().toString(),
+        orders: [
+          {"name": "adsfasf", "price": 45000, "amount": 4.6},
+          {"name": "adsfasf", "price": 45000, "amount": 4.6}
+        ],
+        allSum: 140000,
+        cash: 90000,
+        terminal: 50000,
+        discount: 10000,
+        companyName: "Turkiston");
+    ;
+    await mostbytePrint.printTicket(ticket);
   }
 
   @override
