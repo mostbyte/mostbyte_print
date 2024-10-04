@@ -43,7 +43,7 @@ class MyHomePage extends StatefulWidget {
 
 class _MyHomePageState extends State<MyHomePage> {
   // Move your printing logic here and call it asynchronously
-  Future<void> printInIsolate(String printString) async {
+  Future<void> printInIsolate() async {
     // Ensure that you are calling services only from the main isolate
     // If needed, wrap your isolate function within the `compute` function.
     var mostbytePrint = MostbytePrint(
@@ -75,11 +75,10 @@ class _MyHomePageState extends State<MyHomePage> {
       appBar: AppBar(),
       floatingActionButton: FloatingActionButton(
         onPressed: () async {
-          // for (var i = 0; i < 40; i++) {
-          String data = Demo.testPage("333");
-          await printInIsolate(data);
-          // print.disconnect();
-          // }
+          for (var i = 0; i < 40; i++) {
+            await printInIsolate();
+            // print.disconnect();
+          }
         },
         tooltip: 'Increment',
         child: const Icon(Icons.add),
