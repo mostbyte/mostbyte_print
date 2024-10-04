@@ -20,7 +20,18 @@ class MostbytePrint {
       this.profile});
   NetworkPrinterManager? manager;
 
-  connectPrinter({required String printString}) async {
+  // Static method to run the print logic in an isolate
+  static Future<void> printIsolate(Map<String, dynamic> args) async {
+    String ip = args['ip'];
+    String name = args['name'];
+    String printString = args['printString'];
+
+    // Initialize a new instance inside the isolate
+    var printer = MostbytePrint(ip: ip, name: name);
+    await printer.connectPrinter(printString: printString);
+  }
+
+  Future<void> connectPrinter({required String printString}) async {
     NetWorkPrinter networkPrinter = NetWorkPrinter(
       id: ip,
       name: name,
@@ -39,31 +50,14 @@ class MostbytePrint {
       var service = ESCPrinterService(_bytes);
       var data = await service.getBytes();
       manager!.writeBytes(data);
-      // manager.disconnect();
     } else {
       manager!.disconnect();
-
-      return false;
     }
-    // manager.disconnect();
+
+    // manager?.disconnect(); // Ensure the manager disconnects
   }
 
   disconnect() {
     manager?.disconnect();
-  }
-
-// Static function that will be run in the isolate
-  void isolateEntryPoint(Map<String, dynamic> params) async {
-    var printString = params['printString'];
-    var ip = params['ip'];
-    var name = params['name'];
-
-    var mostbytePrint = MostbytePrint(
-      ip: ip,
-      name: name,
-    );
-
-    await mostbytePrint.connectPrinter(printString: printString);
-    mostbytePrint.disconnect();
   }
 }

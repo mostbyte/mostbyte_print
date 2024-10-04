@@ -1,10 +1,8 @@
 import 'package:example/demo.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:mostbyte_print/print.dart';
 
 void main() {
-  WidgetsFlutterBinding.ensureInitialized();
   runApp(const MyApp());
 }
 
@@ -44,6 +42,7 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
+  // Move your printing logic here and call it asynchronously
   Future<void> printInIsolate(String printString) async {
     // Ensure that you are calling services only from the main isolate
     // If needed, wrap your isolate function within the `compute` function.
@@ -61,11 +60,10 @@ class _MyHomePageState extends State<MyHomePage> {
       floatingActionButton: FloatingActionButton(
         onPressed: () async {
           // for (var i = 0; i < 40; i++) {
-          String data = Demo.testPage("");
-          // Call the isolate via compute
+          String data = Demo.testPage("333");
           await printInIsolate(data);
-
           // print.disconnect();
+          // }
         },
         tooltip: 'Increment',
         child: const Icon(Icons.add),
