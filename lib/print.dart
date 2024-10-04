@@ -38,7 +38,7 @@ class MostbytePrint {
       required String employee,
       required String department,
       required String time,
-      required List<String> orders}) async {
+      required List<Map<String, dynamic>> orders}) async {
     final profile1 = await CapabilityProfile.load();
     final generator = Generator(paperSize, profile ?? profile1);
     List<int> bytes = [];
@@ -49,9 +49,19 @@ class MostbytePrint {
     bytes += generator.textEncoded(await getEncoded("Сотрудник: $employee"));
     bytes += generator.textEncoded(await getEncoded("Отдел: $department"));
     bytes += generator.hr();
-    for (String orderItem in orders) {
-      bytes += generator.textEncoded(await getEncoded(orderItem),
-          styles: const PosStyles(bold: true));
+    for (Map<String, dynamic> orderItem in orders) {
+      bytes += generator.row([
+        PosColumn(
+          textEncoded: await getEncoded("${orderItem["name"]}"),
+          width: 9,
+        ),
+        PosColumn(
+          text: "${orderItem["amount"]}",
+          width: 3,
+        )
+      ]);
+      // bytes += generator.textEncoded(await getEncoded(orderItem),
+      //     styles: const PosStyles(bold: true));
     }
     bytes += generator.hr();
     // bytes += generator.reset();
