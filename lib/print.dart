@@ -176,6 +176,7 @@ class MostbytePrint {
       PosColumn(width: 1),
       PosColumn(
         textEncoded: await getEncoded("Счет №: $orderId"),
+        width: 11,
       )
     ]);
     bytes += generator.textEncoded(await getEncoded("Счет №: $orderId"),
