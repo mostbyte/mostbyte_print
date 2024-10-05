@@ -160,7 +160,7 @@ class MostbytePrint {
     List<int> bytes = [];
     bytes += generator.setGlobalCodeTable("CP866");
     bytes += generator.row([
-      PosColumn(width: 3),
+      PosColumn(width: 1),
       PosColumn(
           textEncoded: await getEncoded(
             companyName,
@@ -170,7 +170,13 @@ class MostbytePrint {
               width: PosTextSize.size2,
               height: PosTextSize.size2,
               bold: true),
-          width: 6)
+          width: 11)
+    ]);
+    bytes += generator.row([
+      PosColumn(width: 1),
+      PosColumn(
+        textEncoded: await getEncoded("Счет №: $orderId"),
+      )
     ]);
     bytes += generator.textEncoded(await getEncoded("Счет №: $orderId"),
         styles: const PosStyles(align: PosAlign.center));
@@ -252,7 +258,7 @@ class MostbytePrint {
     ]);
     // bytes += generator.reset();
     bytes += generator.row([
-      PosColumn(width: 3),
+      PosColumn(width: 1),
       PosColumn(
           textEncoded: await getEncoded(
               "Итого: ${formattedNumber(allSum - discount)}"), //companyName
@@ -261,7 +267,7 @@ class MostbytePrint {
               width: PosTextSize.size2,
               height: PosTextSize.size2,
               bold: true),
-          width: 6)
+          width: 11)
     ]);
 
     bytes += generator.feed(2);
