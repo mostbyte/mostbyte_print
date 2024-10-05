@@ -89,15 +89,19 @@ class MostbytePrint {
     final generator = Generator(paperSize, profile ?? profile1);
     List<int> bytes = [];
     bytes += generator.setGlobalCodeTable("CP866");
-    bytes += generator.textEncoded(
-        await getEncoded(
-          companyName,
-        ), //companyName
-        styles: const PosStyles(
-            align: PosAlign.center,
-            width: PosTextSize.size2,
-            height: PosTextSize.size2,
-            bold: true));
+    bytes += generator.row([
+      PosColumn(width: 3),
+      PosColumn(
+          textEncoded: await getEncoded(
+            companyName,
+          ), //companyName
+          styles: const PosStyles(
+              align: PosAlign.center,
+              width: PosTextSize.size2,
+              height: PosTextSize.size2,
+              bold: true),
+          width: 6)
+    ]);
     bytes += generator.textEncoded(await getEncoded("Счет №: $orderId"),
         styles: const PosStyles(align: PosAlign.center));
     bytes += generator.hr();
@@ -177,13 +181,19 @@ class MostbytePrint {
       )
     ]);
     // bytes += generator.reset();
-    bytes += generator.textEncoded(
-        await getEncoded("Итого: ${formattedNumber(allSum - discount)}"),
-        styles: const PosStyles(
-            align: PosAlign.center,
-            width: PosTextSize.size2,
-            height: PosTextSize.size2,
-            bold: true));
+    bytes += generator.row([
+      PosColumn(width: 3),
+      PosColumn(
+          textEncoded: await getEncoded(
+              "Итого: ${formattedNumber(allSum - discount)}"), //companyName
+          styles: const PosStyles(
+              align: PosAlign.center,
+              width: PosTextSize.size2,
+              height: PosTextSize.size2,
+              bold: true),
+          width: 6)
+    ]);
+
     bytes += generator.feed(2);
     bytes += generator.cut();
     bytes += generator.beep();
@@ -196,7 +206,6 @@ class MostbytePrint {
     if (connect == PosPrintResult.success) {
       PosPrintResult printing = await printer.printTicket(ticket);
 
-      print(printing.msg);
       printer.disconnect();
       return printing.msg == "Success" ? true : false;
     }
