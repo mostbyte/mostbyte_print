@@ -51,21 +51,33 @@ class _MyHomePageState extends State<MyHomePage> {
       name: 'kassa',
     );
     var sss = await mostbytePrint.testTicket();
-    var ticket = await mostbytePrint.generateReciept(
-        orderId: 3,
-        comment: "Бар",
-        employee: "Surayyo",
-        time: DateTime.now().toString(),
-        orders: [
-          {"name": "adsfasf", "price": 45000, "amount": 4.6},
-          {"name": "adsfasf", "price": 45000, "amount": 4.6}
-        ],
-        allSum: 140000,
-        cash: 90000,
-        terminal: 50000,
-        discount: 10000,
-        companyName: "Turkiston");
-    ;
+    // var ticket = await mostbytePrint.generateReciept(
+    //     orderId: 3,
+    //     comment: "Бар",
+    //     employee: "Surayyo",
+    //     time: DateTime.now().toString(),
+    //     orders: [
+    //       {"name": "adsfasf", "price": 45000, "amount": 4.6},
+    //       {"name": "adsfasf", "price": 45000, "amount": 4.6}
+    //     ],
+    //     allSum: 140000,
+    //     cash: 90000,
+    //     terminal: 50000,
+    //     discount: 10000,
+    //     companyName: "Turkiston");
+
+    var ticket = await mostbytePrint.generateCheck(
+      department: "dfasdf",
+      orderId: 3,
+      // comment: "Бар",
+      employee: "Surayyo",
+      time: DateTime.now().toString(),
+      orders: [
+        {"name": "Мороженое клубничный 100гр", "price": 45000, "amount": 4.6},
+        {"name": "adsfasf", "price": 45000, "amount": 4.6}
+      ],
+    );
+
     await mostbytePrint.printTicket(ticket);
   }
 
@@ -75,10 +87,10 @@ class _MyHomePageState extends State<MyHomePage> {
       appBar: AppBar(),
       floatingActionButton: FloatingActionButton(
         onPressed: () async {
-          for (var i = 0; i < 40; i++) {
-            await printInIsolate();
-            // print.disconnect();
-          }
+          // for (var i = 0; i < 40; i++) {
+          await printInIsolate();
+          // print.disconnect();
+          // }
         },
         tooltip: 'Increment',
         child: const Icon(Icons.add),

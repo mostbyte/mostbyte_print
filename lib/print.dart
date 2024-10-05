@@ -64,12 +64,13 @@ class MostbytePrint {
       //     styles: const PosStyles(bold: true));
     }
     bytes += generator.hr();
-    // bytes += generator.reset();
+    bytes += generator.reset();
     bytes +=
         generator.text(time, styles: const PosStyles(align: PosAlign.center));
     bytes += generator.feed(2);
     bytes += generator.cut();
     bytes += generator.beep();
+    bytes += generator.reset();
     return bytes;
   }
 
@@ -88,7 +89,6 @@ class MostbytePrint {
     final generator = Generator(paperSize, profile ?? profile1);
     List<int> bytes = [];
     bytes += generator.setGlobalCodeTable("CP866");
-    bytes += generator.reset();
     bytes += generator.textEncoded(
         await getEncoded(
           companyName,
@@ -187,7 +187,6 @@ class MostbytePrint {
     bytes += generator.feed(2);
     bytes += generator.cut();
     bytes += generator.beep();
-    bytes += generator.reset();
     return bytes;
   }
 
