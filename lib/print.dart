@@ -74,6 +74,76 @@ class MostbytePrint {
     return bytes;
   }
 
+  Future<List<int>> generateShift(
+      {required int shiftId,
+      required String employee,
+      required String filial,
+      required String createdAt,
+      required String closedAt,
+      required String time,
+      required Map<String, dynamic> earned}) async {
+    final profile1 = await CapabilityProfile.load();
+    final generator = Generator(paperSize, profile ?? profile1);
+    List<int> bytes = [];
+
+    // <p>ID смены: <b>${shift.id}</b></p>
+    // <p>Филиал: <b>${globals.userData!.filial!.name_ru}</b></p>
+    // <p>Начало: <b>${globals.dateDashTimeFormat(date: shift.openedAt, timezone: true)}</b></p>
+    // <p>Конец: <b>${globals.dateDashTimeFormat(date: shift.closedAt!, timezone: true)}</b></p>
+    // <p>Ответственный: <b>${shift.user.surname} ${shift.user.firstname}</b></p>
+    // <hr>
+    // <p class="total"> Сумма к сдаче</p>
+    // <p>Терминал: <b>${globals.formattedNumber(double.parse(shift.earned!['closed']['terminal'].toString()))}</b></p>
+    // <p>Наличка: <b>${globals.formattedNumber(double.parse((shift.earned!['closed']['sum'] - shift.earned!['closed']['terminal']).toString()))}</b></p>
+    // <p>Скидки: <b>${globals.formattedNumber(double.parse(shift.earned!['discount'].toString()))}</b></p>
+    // <p>Расходы: <b>${globals.formattedNumber(double.parse(shift.earned!['wasted'].toString()))}</b></p>
+    // <p>Общая сумма: <b>${globals.formattedNumber(double.parse((shift.earned?['closed']['sum'] - shift.earned?['wasted'] - shift.earned?['discount']).toString()))}</b></p>
+    // <hr>
+    // <p class="total"> Сумма Остатка в кассе</p>
+    // <p>Терминал: <b>${globals.formattedNumber(double.parse(shift.earned!['open']['terminal'].toString()))}</b></p>
+    // <p>Наличка: <b>${globals.formattedNumber(double.parse((shift.earned?['open']['sum'] - shift.earned?['open']['terminal']).toString()))}</b></p>
+    // <p>Общая сумма: <b>${globals.formattedNumber(double.parse(shift.earned!['open']['sum'].toString()))}</b></p>
+
+    bytes += generator.setGlobalCodeTable("CP866");
+    bytes += generator.textEncoded(await getEncoded("ID смены: $shiftId"));
+    bytes += generator.textEncoded(await getEncoded("Филиал: $filial"));
+    bytes += generator.textEncoded(await getEncoded("Начало: $createdAt"));
+    bytes += generator.textEncoded(await getEncoded("Конец: $closedAt"));
+    bytes +=
+        generator.textEncoded(await getEncoded("Ответственный: $employee"));
+    bytes += generator.hr();
+
+    bytes +=
+        generator.textEncoded(await getEncoded("Сумма к сдаче"), linesAfter: 1);
+    bytes += generator.textEncoded(await getEncoded(
+        "Терминал: ${formattedNumber(double.parse(earned['closed']['terminal'].toString()))}"));
+    bytes += generator.textEncoded(await getEncoded(
+        "Наличка: ${formattedNumber(double.parse((earned['closed']['sum'] - earned['closed']['terminal']).toString()))}"));
+    bytes += generator.textEncoded(await getEncoded(
+        "Скидки: ${formattedNumber(double.parse(earned['discount'].toString()))}"));
+    bytes += generator.textEncoded(await getEncoded(
+        "Расходы: ${formattedNumber(double.parse(earned['wasted'].toString()))}}"));
+    bytes += generator.textEncoded(await getEncoded(
+        "Общая сумма: ${formattedNumber(double.parse((earned['closed']['sum'] - earned['wasted'] - earned['discount']).toString()))}"));
+
+    bytes += generator.hr();
+
+    bytes += generator.textEncoded(await getEncoded("Сумма Остатка в кассе"),
+        linesAfter: 1);
+    bytes += generator.textEncoded(await getEncoded(
+        "Терминал: ${formattedNumber(double.parse(earned['open']['terminal'].toString()))}"));
+    bytes += generator.textEncoded(await getEncoded(
+        "Наличка: ${formattedNumber(double.parse((earned['open']['sum'] - earned['open']['terminal']).toString()))}"));
+    bytes += generator.textEncoded(await getEncoded(
+        "Общая сумма: ${formattedNumber(double.parse(earned['open']['sum'].toString()))}"));
+    bytes += generator.hr();
+    bytes += generator.text(time);
+    bytes += generator.feed(2);
+    bytes += generator.cut();
+    bytes += generator.beep();
+    return bytes;
+  }
+
   Future<List<int>> generateReciept(
       {required String companyName,
       String? comment,
