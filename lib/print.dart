@@ -179,14 +179,12 @@ class MostbytePrint {
         width: 11,
       )
     ]);
-    bytes += generator.textEncoded(await getEncoded("Счет №: $orderId"),
-        styles: const PosStyles(align: PosAlign.center));
     bytes += generator.hr();
     bytes += generator.reset();
     bytes += generator.textEncoded(await getEncoded("Распечатано: $time"),
         styles: const PosStyles(align: PosAlign.left)); //print
     bytes += generator
-        .textEncoded(await getEncoded("ОТветственный: $employee")); // emopoyee
+        .textEncoded(await getEncoded("Ответственный: $employee")); // emopoyee
     bytes += generator
         .textEncoded(await getEncoded("Коммент: ${comment ?? ""}")); // comment
     bytes += generator.hr();
