@@ -154,6 +154,11 @@ class MostbytePrint {
       required double cash,
       required double terminal,
       required double discount,
+      double? tableAmount,
+      double? tablePrice,
+      String? tableName,
+      String? createdAt,
+      String? closedAt,
       required List<Map<String, dynamic>> orders}) async {
     final profile1 = await CapabilityProfile.load();
     final generator = Generator(paperSize, profile ?? profile1);
@@ -183,6 +188,14 @@ class MostbytePrint {
     bytes += generator.reset();
     bytes += generator.textEncoded(await getEncoded("Распечатано: $time"),
         styles: const PosStyles(align: PosAlign.left)); //print
+    if (createdAt != null) {
+      bytes += generator.textEncoded(await getEncoded("Начало: $createdAt"),
+          styles: const PosStyles(align: PosAlign.left)); //print
+    }
+    if (closedAt != null) {
+      bytes += generator.textEncoded(await getEncoded("Конец: $closedAt"),
+          styles: const PosStyles(align: PosAlign.left)); //print
+    }
     bytes += generator
         .textEncoded(await getEncoded("Ответственный: $employee")); // emopoyee
     bytes += generator
@@ -215,6 +228,34 @@ class MostbytePrint {
       // bytes += generator.textEncoded(await getEncoded(orderItem),
       //     styles: const PosStyles(bold: true));
     }
+
+    if (tableName != null && tablePrice != null && tableAmount != null) {
+      bytes += generator.row([
+        PosColumn(
+            textEncoded: await getEncoded(tableName),
+            width: 12,
+            styles: const PosStyles(
+              bold: true,
+              underline: true,
+            )),
+      ]);
+      bytes += generator.row([
+        PosColumn(
+          text: "",
+          width: 4,
+        ),
+        PosColumn(
+          text: "$tableAmount * $tablePrice",
+          width: 4,
+        ),
+        PosColumn(
+          text: "${formattedNumber(tableAmount * tablePrice)}",
+          width: 4,
+        )
+      ]);
+    }
+
+    bytes += generator.hr();
     bytes += generator.row([
       PosColumn(
         textEncoded: await getEncoded("Сумма заказа:"),

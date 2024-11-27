@@ -43,7 +43,7 @@ class MyHomePage extends StatefulWidget {
 
 class _MyHomePageState extends State<MyHomePage> {
   // Move your printing logic here and call it asynchronously
-  Future<void> printInIsolate() async {
+  Future<void> printInIsolate(int i) async {
     // Ensure that you are calling services only from the main isolate
     // If needed, wrap your isolate function within the `compute` function.
     var mostbytePrint = MostbytePrint(
@@ -51,32 +51,37 @@ class _MyHomePageState extends State<MyHomePage> {
       name: 'kassa',
     );
     var sss = await mostbytePrint.testTicket();
-    // var ticket = await mostbytePrint.generateReciept(
-    //     orderId: 3,
-    //     comment: "Бар",
-    //     employee: "Surayyo",
-    //     time: DateTime.now().toString(),
-    //     orders: [
-    //       {"name": "adsfasf", "price": 45000, "amount": 4.6},
-    //       {"name": "adsfasf", "price": 45000, "amount": 4.6}
-    //     ],
-    //     allSum: 140000,
-    //     cash: 90000,
-    //     terminal: 50000,
-    //     discount: 10000,
-    //     companyName: "Turkiston");
+    var ticket = await mostbytePrint.generateReciept(
+        orderId: 3,
+        comment: "Бар",
+        employee: "Surayyo",
+        time: DateTime.now().toString(),
+        orders: [
+          {"name": "adsfasf", "price": 45000, "amount": 4.6},
+          {"name": "adsfasf", "price": 45000, "amount": 4.6}
+        ],
+        tableAmount: 3.4,
+        tableName: "kabina 2",
+        tablePrice: 25000,
+        createdAt: "2024-11-27 12:34:44",
+        closedAt: "2024-11-27 14:24:14",
+        allSum: 140000,
+        cash: 90000,
+        terminal: 50000,
+        discount: 10000,
+        companyName: "Turkiston");
 
-    var ticket = await mostbytePrint.generateCheck(
-      department: "dfasdf",
-      orderId: 3,
-      // comment: "Бар",
-      employee: "Surayyo",
-      time: DateTime.now().toString(),
-      orders: [
-        {"name": "Мороженое клубничный 100гр", "price": 45000, "amount": 4.6},
-        {"name": "adsfasf", "price": 45000, "amount": 4.6}
-      ],
-    );
+    // var ticket = await mostbytePrint.generateReciept(
+    //   department: "desktop $i",
+    //   orderId: 3,
+    //   // comment: "Бар",
+    //   employee: "Surayyo",
+    //   time: DateTime.now().toString(),
+    //   orders: [
+    //     {"name": "Мороженое клубничный 100гр", "price": 45000, "amount": 4.6},
+    //     {"name": "adsfasf", "price": 45000, "amount": 4.6}
+    //   ],
+    // );
 
     await mostbytePrint.printTicket(ticket);
   }
@@ -88,7 +93,7 @@ class _MyHomePageState extends State<MyHomePage> {
       floatingActionButton: FloatingActionButton(
         onPressed: () async {
           // for (var i = 0; i < 40; i++) {
-          await printInIsolate();
+          await printInIsolate(3);
           // print.disconnect();
           // }
         },
