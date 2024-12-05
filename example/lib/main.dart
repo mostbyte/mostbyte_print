@@ -60,7 +60,8 @@ class _MyHomePageState extends State<MyHomePage> {
           {"name": "adsfasf", "price": 45000, "amount": 4.6},
           {"name": "adsfasf", "price": 45000, "amount": 4.6}
         ],
-        tableAmount: 3.4,
+        hours: 3,
+        minutes: 3,
         tableName: "kabina 2",
         tablePrice: 25000,
         createdAt: "2024-11-27 12:34:44",

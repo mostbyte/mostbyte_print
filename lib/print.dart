@@ -154,12 +154,19 @@ class MostbytePrint {
       required double cash,
       required double terminal,
       required double discount,
-      double? tableAmount,
+      int? hours,
+      int? minutes,
       double? tablePrice,
       String? tableName,
       String? createdAt,
       String? closedAt,
       required List<Map<String, dynamic>> orders}) async {
+    double tableTotalPrice = tablePrice != null
+        ? ((hours != null
+                ? (hours + (minutes != null ? (minutes / 60) : 0))
+                : 1) *
+            tablePrice)
+        : 0;
     final profile1 = await CapabilityProfile.load();
     final generator = Generator(paperSize, profile ?? profile1);
     List<int> bytes = [];
@@ -229,7 +236,9 @@ class MostbytePrint {
       //     styles: const PosStyles(bold: true));
     }
 
-    if (tableName != null && tablePrice != null && tableAmount != null) {
+    if (tableName != null &&
+        tablePrice != null &&
+        (hours != null || minutes != null)) {
       bytes += generator.row([
         PosColumn(
             textEncoded: await getEncoded(tableName),
@@ -245,11 +254,11 @@ class MostbytePrint {
           width: 4,
         ),
         PosColumn(
-          text: "$tableAmount * $tablePrice",
+          text: "${hours ?? 1}:${minutes} * $tablePrice",
           width: 4,
         ),
         PosColumn(
-          text: "${formattedNumber(tableAmount * tablePrice)}",
+          text: "${tableTotalPrice}",
           width: 4,
         )
       ]);
@@ -262,7 +271,8 @@ class MostbytePrint {
         width: 9,
       ),
       PosColumn(
-        textEncoded: await getEncoded("${formattedNumber(allSum)}"),
+        textEncoded:
+            await getEncoded("${formattedNumber(allSum + tableTotalPrice)}"),
         width: 3,
       )
     ]);
@@ -301,7 +311,7 @@ class MostbytePrint {
       PosColumn(width: 1),
       PosColumn(
           textEncoded: await getEncoded(
-              "Итого: ${formattedNumber(allSum - discount)}"), //companyName
+              "Итого: ${formattedNumber(allSum - discount + tableTotalPrice)}"), //companyName
           styles: const PosStyles(
               align: PosAlign.center,
               width: PosTextSize.size2,
