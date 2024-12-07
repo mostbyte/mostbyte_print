@@ -55,6 +55,7 @@ class _MyHomePageState extends State<MyHomePage> {
         orderId: 3,
         comment: "Бар",
         employee: "Surayyo",
+        percent: 12,
         time: DateTime.now().toString(),
         orders: [
           {"name": "adsfasf", "price": 45000, "amount": 4.6},

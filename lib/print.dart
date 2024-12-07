@@ -154,6 +154,7 @@ class MostbytePrint {
       required double cash,
       required double terminal,
       required double discount,
+      required double percent,
       int? hours,
       int? minutes,
       double? tablePrice,
@@ -265,6 +266,17 @@ class MostbytePrint {
     }
 
     bytes += generator.hr();
+    bytes += generator.row([
+      PosColumn(
+        textEncoded: await getEncoded("Обслуживание $percent%: "),
+        width: 9,
+      ),
+      PosColumn(
+        textEncoded: await getEncoded(
+            "${formattedNumber(allSum * percent / (100 + percent))}"),
+        width: 3,
+      )
+    ]);
     bytes += generator.row([
       PosColumn(
         textEncoded: await getEncoded("Сумма заказа:"),
