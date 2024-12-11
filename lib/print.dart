@@ -168,6 +168,8 @@ class MostbytePrint {
                 : 1) *
             tablePrice)
         : 0;
+    tableTotalPrice =
+        double.parse((tableTotalPrice / 100).toStringAsFixed(2)).round() * 100;
     final profile1 = await CapabilityProfile.load();
     final generator = Generator(paperSize, profile ?? profile1);
     List<int> bytes = [];
@@ -225,7 +227,8 @@ class MostbytePrint {
           width: 4,
         ),
         PosColumn(
-          text: "${orderItem["amount"]} * ${orderItem["price"]}",
+          text:
+              "${orderItem["amount"]} * ${formattedNumber(orderItem["price"])}",
           width: 4,
         ),
         PosColumn(
@@ -255,11 +258,11 @@ class MostbytePrint {
           width: 4,
         ),
         PosColumn(
-          text: "${hours ?? 1}:${minutes} * $tablePrice",
+          text: "${hours ?? 1}:${minutes} * $formattedNumber(tablePrice)",
           width: 4,
         ),
         PosColumn(
-          text: "${tableTotalPrice}",
+          text: "${formattedNumber(tableTotalPrice)}",
           width: 4,
         )
       ]);
