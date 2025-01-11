@@ -33,6 +33,61 @@ class MostbytePrint {
     return bytes;
   }
 
+  Future<List<int>> generateOrderCheck({
+    required int orderNum,
+    required String type,
+    required String user,
+    required String time,
+  }) async {
+    final profile1 = await CapabilityProfile.load();
+    final generator = Generator(paperSize, profile ?? profile1);
+    List<int> bytes = [];
+    bytes += generator.setGlobalCodeTable("CP866");
+    bytes += generator.textEncoded(await getEncoded("Ваш номер очереди"),
+        styles: const PosStyles(
+          align: PosAlign.center,
+          width: PosTextSize.size5,
+          bold: false,
+          height: PosTextSize.size5,
+        ));
+    // bytes += generator.reset();
+    bytes += generator.textEncoded(
+      await getEncoded("$orderNum"),
+      styles: const PosStyles(
+          align: PosAlign.center,
+          width: PosTextSize.size1,
+          height: PosTextSize.size1,
+          bold: true),
+    );
+    bytes += generator.textEncoded(
+      await getEncoded("Время и дата выдачи"),
+      styles: const PosStyles(
+          align: PosAlign.center,
+          width: PosTextSize.size7,
+          height: PosTextSize.size7,
+          bold: false),
+    );
+    bytes += generator.textEncoded(
+      await getEncoded(time),
+      styles: const PosStyles(
+          align: PosAlign.center,
+          width: PosTextSize.size7,
+          height: PosTextSize.size7,
+          bold: false),
+    );
+    bytes += generator.hr();
+
+    bytes += generator.hr();
+    bytes += generator.reset();
+    bytes +=
+        generator.text(time, styles: const PosStyles(align: PosAlign.center));
+    bytes += generator.feed(2);
+    bytes += generator.cut();
+    bytes += generator.beep();
+    bytes += generator.reset();
+    return bytes;
+  }
+
   Future<List<int>> generateCheck(
       {required int orderId,
       required String employee,
