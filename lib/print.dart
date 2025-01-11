@@ -99,7 +99,10 @@ class MostbytePrint {
     List<int> bytes = [];
     bytes += generator.setGlobalCodeTable("CP866");
     bytes += generator.textEncoded(await getEncoded("Счет №: $orderId"),
-        styles: const PosStyles(align: PosAlign.center));
+        styles: const PosStyles(
+            align: PosAlign.center,
+            width: PosTextSize.size1,
+            height: PosTextSize.size1));
     // bytes += generator.reset();
     bytes += generator.textEncoded(await getEncoded("Сотрудник: $employee"));
     bytes += generator.textEncoded(await getEncoded("Отдел: $department"));
@@ -283,7 +286,7 @@ class MostbytePrint {
         ),
         PosColumn(
           text:
-              "${orderItem["amount"]} * ${formattedNumber(orderItem["price"])}",
+              "${orderItem["amount"]} * ${formattedNumber(double.parse(orderItem["price"].toString()))}",
           width: 4,
         ),
         PosColumn(
@@ -313,7 +316,7 @@ class MostbytePrint {
           width: 4,
         ),
         PosColumn(
-          text: "${hours ?? 1}:${minutes} * $formattedNumber(tablePrice)",
+          text: "${hours ?? 1}:${minutes} * ${formattedNumber(tablePrice)}",
           width: 4,
         ),
         PosColumn(
@@ -381,7 +384,7 @@ class MostbytePrint {
       PosColumn(width: 1),
       PosColumn(
           textEncoded: await getEncoded(
-              "Итого: ${formattedNumber(allSum - discount + tableTotalPrice)}"), //companyName
+              "Итого: ${formattedNumber(double.parse(((allSum - discount + tableTotalPrice) / 1000).toStringAsFixed(2)).round() * 1000)}"), //companyName
           styles: const PosStyles(
               align: PosAlign.center,
               width: PosTextSize.size2,
@@ -393,6 +396,7 @@ class MostbytePrint {
     bytes += generator.feed(2);
     bytes += generator.cut();
     bytes += generator.beep();
+    bytes += generator.reset();
     return bytes;
   }
 
