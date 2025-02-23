@@ -12,6 +12,7 @@ class MostbytePrint {
   String ip;
   String name;
   CapabilityProfile? profile;
+
   MostbytePrint(
       {required this.ip,
       required this.name,
@@ -43,45 +44,92 @@ class MostbytePrint {
     final generator = Generator(paperSize, profile ?? profile1);
     List<int> bytes = [];
     bytes += generator.setGlobalCodeTable("CP866");
-    bytes += generator.textEncoded(await getEncoded("Ваш номер очереди"),
-        styles: const PosStyles(
-          align: PosAlign.center,
-          width: PosTextSize.size5,
-          bold: false,
-          height: PosTextSize.size5,
-        ));
+    bytes += generator.row([
+      PosColumn(width: 1),
+      PosColumn(
+          textEncoded: await getEncoded(
+            "Ваш номер очереди",
+          ), //companyName
+          styles: const PosStyles(
+            align: PosAlign.center,
+            width: PosTextSize.size1,
+            bold: false,
+            height: PosTextSize.size1,
+          ),
+          width: 11)
+    ]);
+
     // bytes += generator.reset();
-    bytes += generator.textEncoded(
-      await getEncoded("$orderNum"),
-      styles: const PosStyles(
-          align: PosAlign.center,
-          width: PosTextSize.size1,
-          height: PosTextSize.size1,
-          bold: true),
-    );
+    bytes += generator.row([
+      PosColumn(width: 1),
+      PosColumn(
+          textEncoded: await getEncoded("$orderNum"),
+          styles: const PosStyles(
+              align: PosAlign.center,
+              width: PosTextSize.size5,
+              height: PosTextSize.size5,
+              bold: true),
+          width: 11),
+    ]);
+
+    bytes += generator.row([
+      PosColumn(
+        textEncoded: await getEncoded("Врач:  "),
+        width: 1,
+        styles: const PosStyles(
+            align: PosAlign.left,
+            width: PosTextSize.size1,
+            height: PosTextSize.size1,
+            bold: false),
+      ),
+      PosColumn(
+          textEncoded: await getEncoded("$user"),
+          styles: const PosStyles(
+              align: PosAlign.left,
+              width: PosTextSize.size1,
+              height: PosTextSize.size1,
+              bold: false),
+          width: 11),
+    ]);
+
+    bytes += generator.row([
+      PosColumn(
+        textEncoded: await getEncoded("Тип услиги:  "),
+        width: 1,
+        styles: const PosStyles(
+            align: PosAlign.left,
+            width: PosTextSize.size1,
+            height: PosTextSize.size1,
+            bold: false),
+      ),
+      PosColumn(
+          textEncoded: await getEncoded(
+              "${type == "slow" ? "Обычная процедура" : "Быстрая процедура"}"),
+          styles: const PosStyles(
+              align: PosAlign.left,
+              width: PosTextSize.size1,
+              height: PosTextSize.size1,
+              bold: false),
+          width: 11),
+    ]);
+
+    bytes += generator.hr();
     bytes += generator.textEncoded(
       await getEncoded("Время и дата выдачи"),
       styles: const PosStyles(
           align: PosAlign.center,
-          width: PosTextSize.size7,
-          height: PosTextSize.size7,
+          width: PosTextSize.size1,
+          height: PosTextSize.size1,
           bold: false),
     );
     bytes += generator.textEncoded(
       await getEncoded(time),
       styles: const PosStyles(
           align: PosAlign.center,
-          width: PosTextSize.size7,
-          height: PosTextSize.size7,
+          width: PosTextSize.size1,
+          height: PosTextSize.size1,
           bold: false),
     );
-    bytes += generator.hr();
-
-    bytes += generator.hr();
-    bytes += generator.reset();
-    bytes +=
-        generator.text(time, styles: const PosStyles(align: PosAlign.center));
-    bytes += generator.feed(2);
     bytes += generator.cut();
     bytes += generator.beep();
     bytes += generator.reset();
@@ -93,6 +141,7 @@ class MostbytePrint {
       required String employee,
       required String department,
       required String time,
+      required String currentTime,
       required List<Map<String, dynamic>> orders}) async {
     final profile1 = await CapabilityProfile.load();
     final generator = Generator(paperSize, profile ?? profile1);
@@ -106,6 +155,8 @@ class MostbytePrint {
     // bytes += generator.reset();
     bytes += generator.textEncoded(await getEncoded("Сотрудник: $employee"));
     bytes += generator.textEncoded(await getEncoded("Отдел: $department"));
+    bytes +=
+        generator.textEncoded(await getEncoded("Распечатано: $currentTime"));
     bytes += generator.hr();
     for (Map<String, dynamic> orderItem in orders) {
       bytes += generator.row([
@@ -180,9 +231,11 @@ class MostbytePrint {
     bytes += generator.textEncoded(await getEncoded(
         "Скидки: ${formattedNumber(double.parse(earned['discount'].toString()))}"));
     bytes += generator.textEncoded(await getEncoded(
-        "Расходы: ${formattedNumber(double.parse(earned['wasted'].toString()))}}"));
+        "Долги: ${formattedNumber(double.parse(earned['debt'].toString()))}"));
     bytes += generator.textEncoded(await getEncoded(
-        "Общая сумма: ${formattedNumber(double.parse((earned['closed']['sum'] - earned['wasted'] - earned['discount']).toString()))}"));
+        "Расходы: ${formattedNumber(double.parse(earned['wasted'].toString()))}"));
+    bytes += generator.textEncoded(await getEncoded(
+        "Общая сумма: ${formattedNumber(double.parse((earned['closed']['sum'] - earned['wasted'] - earned['discount'] - earned['debt']).toString()))}"));
 
     bytes += generator.hr();
 
@@ -384,7 +437,7 @@ class MostbytePrint {
       PosColumn(width: 1),
       PosColumn(
           textEncoded: await getEncoded(
-              "Итого: ${formattedNumber(double.parse(((allSum - discount + tableTotalPrice) / 1000).toStringAsFixed(2)).round() * 1000)}"), //companyName
+              "Итого: ${formattedNumber(double.parse(((allSum - discount + tableTotalPrice) / 100).toStringAsFixed(2)).round() * 100)}"), //companyName
           styles: const PosStyles(
               align: PosAlign.center,
               width: PosTextSize.size2,
@@ -401,14 +454,25 @@ class MostbytePrint {
   }
 
   Future<bool> printTicket(List<int> ticket) async {
+    final stopwatch = Stopwatch()..start();
     final printer = PrinterNetworkManager(ip);
-    PosPrintResult connect = await printer.connect();
+    PosPrintResult connect =
+        await printer.connect(timeout: Duration(seconds: 2));
+
+    stopwatch.stop();
+    print(
+        'Время выполнения подключения с $ip :${stopwatch.elapsedMilliseconds} мс');
+    stopwatch.start();
     if (connect == PosPrintResult.success) {
       PosPrintResult printing = await printer.printTicket(ticket);
 
       printer.disconnect();
+      stopwatch.stop();
+      print('Время выполнения print $ip :${stopwatch.elapsedMilliseconds} мс');
       return printing.msg == "Success" ? true : false;
     }
+    stopwatch.stop();
+    print('Время выполнения не print $ip :${stopwatch.elapsedMilliseconds} мс');
     return false;
   }
 
