@@ -52,7 +52,8 @@ class _MyHomePageState extends State<MyHomePage> {
     );
     var sss = await mostbytePrint.testTicket();
     var ticket = await mostbytePrint.generateReciept(
-        orderId: 3,
+        orderNum: 3,
+        orderId: 3342,
         comment: "Бар",
         employee: "Surayyo",
         percent: 12,

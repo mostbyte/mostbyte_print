@@ -6,6 +6,7 @@ import 'package:charset_converter/charset_converter.dart';
 import 'package:flutter_esc_pos_network/flutter_esc_pos_network.dart';
 import 'package:mostbyte_print/esc_pos/esc_pos_utils_plus.dart';
 import 'package:intl/intl.dart';
+import 'package:image/image.dart';
 
 class MostbytePrint {
   PaperSize paperSize;
@@ -235,6 +236,8 @@ class MostbytePrint {
     bytes += generator.textEncoded(await getEncoded(
         "Расходы: ${formattedNumber(double.parse(earned['wasted'].toString()))}"));
     bytes += generator.textEncoded(await getEncoded(
+        "Возвраты: ${formattedNumber(double.parse(earned['refund']["sum"].toString()))}"));
+    bytes += generator.textEncoded(await getEncoded(
         "Общая сумма: ${formattedNumber(double.parse((earned['closed']['sum'] - earned['wasted'] - earned['discount'] - earned['debt']).toString()))}"));
 
     bytes += generator.hr();
@@ -259,6 +262,7 @@ class MostbytePrint {
       {required String companyName,
       String? comment,
       required int orderId,
+      required int orderNum,
       required String employee,
       required String time,
       required double allSum,
@@ -266,6 +270,7 @@ class MostbytePrint {
       required double terminal,
       required double discount,
       required double percent,
+      Image? barcodeImg,
       int? hours,
       int? minutes,
       double? tablePrice,
@@ -301,7 +306,7 @@ class MostbytePrint {
     bytes += generator.row([
       PosColumn(width: 1),
       PosColumn(
-        textEncoded: await getEncoded("Счет №: $orderId"),
+        textEncoded: await getEncoded("Счет №: $orderNum"),
         width: 11,
       )
     ]);
@@ -445,6 +450,16 @@ class MostbytePrint {
               bold: true),
           width: 11)
     ]);
+
+    bytes += generator.feed(2);
+    if (barcodeImg != null) {
+      bytes += generator.imageRaster(barcodeImg, align: PosAlign.center);
+    }
+    // bytes += generator.barcode(
+    //     width: 150,
+    //     Barcode.code128("{B $orderId".split("")),
+    //     height: 50,
+    //     align: PosAlign.center);
 
     bytes += generator.feed(2);
     bytes += generator.cut();
