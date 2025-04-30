@@ -270,6 +270,7 @@ class MostbytePrint {
       required double terminal,
       required double discount,
       required double percent,
+      required String orderType,
       Image? barcodeImg,
       int? hours,
       int? minutes,
@@ -284,8 +285,8 @@ class MostbytePrint {
                 : 1) *
             tablePrice)
         : 0;
-    tableTotalPrice =
-        double.parse((tableTotalPrice / 100).toStringAsFixed(2)).round() * 100;
+    // tableTotalPrice =
+    //     double.parse((tableTotalPrice / 100).toStringAsFixed(2)).round() * 100;
     final profile1 = await CapabilityProfile.load();
     final generator = Generator(paperSize, profile ?? profile1);
     List<int> bytes = [];
@@ -312,6 +313,8 @@ class MostbytePrint {
     ]);
     bytes += generator.hr();
     bytes += generator.reset();
+    bytes += generator.textEncoded(await getEncoded("Тип счета: $orderType"),
+        styles: const PosStyles(align: PosAlign.left)); //reciept type
     bytes += generator.textEncoded(await getEncoded("Распечатано: $time"),
         styles: const PosStyles(align: PosAlign.left)); //print
     if (createdAt != null) {
@@ -442,7 +445,8 @@ class MostbytePrint {
       PosColumn(width: 1),
       PosColumn(
           textEncoded: await getEncoded(
-              "Итого: ${formattedNumber(double.parse(((allSum - discount + tableTotalPrice) / 100).toStringAsFixed(2)).round() * 100)}"), //companyName
+              "Итого: ${formattedNumber(allSum - discount + tableTotalPrice)}"), //companyName
+          // "Итого: ${formattedNumber(double.parse(((allSum - discount + tableTotalPrice) / 100).toStringAsFixed(2)).round() * 100)}"), //companyName
           styles: const PosStyles(
               align: PosAlign.center,
               width: PosTextSize.size2,
