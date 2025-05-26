@@ -7,6 +7,7 @@ import 'package:flutter_esc_pos_network/flutter_esc_pos_network.dart';
 import 'package:mostbyte_print/esc_pos/esc_pos_utils_plus.dart';
 import 'package:intl/intl.dart';
 import 'package:image/image.dart';
+import './models/data_models/data_models.dart';
 
 class MostbytePrint {
   PaperSize paperSize;
@@ -185,13 +186,8 @@ class MostbytePrint {
   }
 
   Future<List<int>> generateShift(
-      {required int shiftId,
-      required String employee,
-      required String filial,
-      required String createdAt,
-      required String closedAt,
-      required String time,
-      required Map<String, dynamic> earned}) async {
+      {required Map<String, dynamic> shiftData, required String time}) async {
+    Shift shift = Shift.fromJson(shiftData);
     final profile1 = await CapabilityProfile.load();
     final generator = Generator(paperSize, profile ?? profile1);
     List<int> bytes = [];
@@ -215,41 +211,50 @@ class MostbytePrint {
     // <p>Общая сумма: <b>${globals.formattedNumber(double.parse(shift.earned!['open']['sum'].toString()))}</b></p>
 
     bytes += generator.setGlobalCodeTable("CP866");
-    bytes += generator.textEncoded(await getEncoded("ID смены: $shiftId"));
-    bytes += generator.textEncoded(await getEncoded("Филиал: $filial"));
-    bytes += generator.textEncoded(await getEncoded("Начало: $createdAt"));
-    bytes += generator.textEncoded(await getEncoded("Конец: $closedAt"));
+    bytes += generator.textEncoded(await getEncoded("ID смены: ${shift.id}"));
+    bytes += generator
+        .textEncoded(await getEncoded("Филиал: ${shift.user.filial!.name_ru}"));
     bytes +=
-        generator.textEncoded(await getEncoded("Ответственный: $employee"));
+        generator.textEncoded(await getEncoded("Начало: ${shift.openedAt}"));
+    bytes +=
+        generator.textEncoded(await getEncoded("Конец: ${shift.closedAt}"));
+    bytes += generator.textEncoded(await getEncoded(
+        "Ответственный: ${shift.user.surname} ${shift.user.firstname}"));
     bytes += generator.hr();
 
     bytes +=
         generator.textEncoded(await getEncoded("Сумма к сдаче"), linesAfter: 1);
-    bytes += generator.textEncoded(await getEncoded(
-        "Терминал: ${formattedNumber(double.parse(earned['closed']['terminal'].toString()))}"));
-    bytes += generator.textEncoded(await getEncoded(
-        "Наличка: ${formattedNumber(double.parse((earned['closed']['sum'] - earned['closed']['terminal']).toString()))}"));
-    bytes += generator.textEncoded(await getEncoded(
-        "Скидки: ${formattedNumber(double.parse(earned['discount'].toString()))}"));
-    bytes += generator.textEncoded(await getEncoded(
-        "Долги: ${formattedNumber(double.parse(earned['debt'].toString()))}"));
-    bytes += generator.textEncoded(await getEncoded(
-        "Расходы: ${formattedNumber(double.parse(earned['wasted'].toString()))}"));
-    bytes += generator.textEncoded(await getEncoded(
-        "Возвраты: ${formattedNumber(double.parse(earned['refund']["sum"].toString()))}"));
-    bytes += generator.textEncoded(await getEncoded(
-        "Общая сумма: ${formattedNumber(double.parse((earned['closed']['sum'] - earned['wasted'] - earned['discount'] - earned['debt']).toString()))}"));
+    if (shift.earned != null) {
+      bytes += generator.textEncoded(await getEncoded(
+          "Терминал: ${formattedNumber(double.parse(shift.earned!.closed.terminal.toString()))}"));
+      bytes += generator.textEncoded(await getEncoded(
+          "Перевод на карту: ${formattedNumber(double.parse(shift.earned!.closed.transferByCard.toString()))}"));
+      bytes += generator.textEncoded(await getEncoded(
+          "Наличка: ${formattedNumber(double.parse((shift.earned!.closed.sum - shift.earned!.closed.terminal - shift.earned!.closed.transferByCard).toString()))}"));
+      bytes += generator.textEncoded(await getEncoded(
+          "Скидки: ${formattedNumber(double.parse(shift.earned!.discount.toString()))}"));
+      bytes += generator.textEncoded(await getEncoded(
+          "Долги: ${formattedNumber(double.parse(shift.earned!.debt.toString()))}"));
+      bytes += generator.textEncoded(await getEncoded(
+          "Расходы: ${formattedNumber(double.parse(shift.earned!.wasted.toString()))}"));
+      bytes += generator.textEncoded(await getEncoded(
+          "Возвраты: ${formattedNumber(double.parse(shift.earned!.refund.sum.toString()))}"));
+      bytes += generator.textEncoded(await getEncoded(
+          "Общая сумма: ${formattedNumber(double.parse((shift.earned!.closed.sum - shift.earned!.wasted - shift.earned!.discount - shift.earned!.debt).toString()))}"));
 
-    bytes += generator.hr();
+      bytes += generator.hr();
 
-    bytes += generator.textEncoded(await getEncoded("Сумма Остатка в кассе"),
-        linesAfter: 1);
-    bytes += generator.textEncoded(await getEncoded(
-        "Терминал: ${formattedNumber(double.parse(earned['open']['terminal'].toString()))}"));
-    bytes += generator.textEncoded(await getEncoded(
-        "Наличка: ${formattedNumber(double.parse((earned['open']['sum'] - earned['open']['terminal']).toString()))}"));
-    bytes += generator.textEncoded(await getEncoded(
-        "Общая сумма: ${formattedNumber(double.parse(earned['open']['sum'].toString()))}"));
+      bytes += generator.textEncoded(await getEncoded("Сумма Остатка в кассе"),
+          linesAfter: 1);
+      bytes += generator.textEncoded(await getEncoded(
+          "Терминал: ${formattedNumber(double.parse(shift.earned!.open.terminal.toString()))}"));
+      bytes += generator.textEncoded(await getEncoded(
+          "Перевод на карту: ${formattedNumber(double.parse(shift.earned!.open.transferByCard.toString()))}"));
+      bytes += generator.textEncoded(await getEncoded(
+          "Наличка: ${formattedNumber(double.parse((shift.earned!.open.sum - shift.earned!.open.terminal - shift.earned!.open.transferByCard).toString()))}"));
+      bytes += generator.textEncoded(await getEncoded(
+          "Общая сумма: ${formattedNumber(double.parse(shift.earned!.open.sum.toString()))}"));
+    }
     bytes += generator.hr();
     bytes += generator.text(time);
     bytes += generator.feed(2);
@@ -268,6 +273,7 @@ class MostbytePrint {
       required double allSum,
       required double cash,
       required double terminal,
+      required double transferByCard,
       required double discount,
       required double percent,
       required String orderType,
@@ -432,6 +438,16 @@ class MostbytePrint {
     ]);
     bytes += generator.row([
       PosColumn(
+        textEncoded: await getEncoded("Перевод на карту:"),
+        width: 9,
+      ),
+      PosColumn(
+        textEncoded: await getEncoded("${formattedNumber(transferByCard)}"),
+        width: 3,
+      )
+    ]);
+    bytes += generator.row([
+      PosColumn(
         textEncoded: await getEncoded("Скидка:"),
         width: 9,
       ),
@@ -445,8 +461,8 @@ class MostbytePrint {
       PosColumn(width: 1),
       PosColumn(
           textEncoded: await getEncoded(
-              "Итого: ${formattedNumber(allSum - discount + tableTotalPrice)}"), //companyName
-          // "Итого: ${formattedNumber(double.parse(((allSum - discount + tableTotalPrice) / 100).toStringAsFixed(2)).round() * 100)}"), //companyName
+              // "Итого: ${formattedNumber(allSum - discount + tableTotalPrice)}"), //companyName
+              "Итого: ${formattedNumber(double.parse(((allSum - discount + tableTotalPrice) / 100).toStringAsFixed(2)).round() * 100)}"), //companyName
           styles: const PosStyles(
               align: PosAlign.center,
               width: PosTextSize.size2,
