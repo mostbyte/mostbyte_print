@@ -337,6 +337,7 @@ class MostbytePrint {
         .textEncoded(await getEncoded("Коммент: ${comment ?? ""}")); // comment
     bytes += generator.hr();
     for (Map<String, dynamic> orderItem in orders) {
+      if (!orderItem["isVisible"]) continue;
       bytes += generator.row([
         PosColumn(
             textEncoded: await getEncoded(orderItem["name"]),
