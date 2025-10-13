@@ -41,6 +41,7 @@ class MostbytePrint {
     required String type,
     required String user,
     required String time,
+    bool isSound = true,
   }) async {
     final profile1 = await CapabilityProfile.load();
     final generator = Generator(paperSize, profile ?? profile1);
@@ -133,7 +134,9 @@ class MostbytePrint {
           bold: false),
     );
     bytes += generator.cut();
-    bytes += generator.beep();
+    if (isSound) {
+      bytes += generator.beep();
+    }
     bytes += generator.reset();
     return bytes;
   }
@@ -144,6 +147,7 @@ class MostbytePrint {
       required String department,
       required String time,
       required String currentTime,
+      bool isSound = true,
       required List<Map<String, dynamic>> orders}) async {
     final profile1 = await CapabilityProfile.load();
     final generator = Generator(paperSize, profile ?? profile1);
@@ -180,13 +184,18 @@ class MostbytePrint {
         generator.text(time, styles: const PosStyles(align: PosAlign.center));
     bytes += generator.feed(2);
     bytes += generator.cut();
-    bytes += generator.beep();
+    if (isSound) {
+      bytes += generator.beep();
+    }
     bytes += generator.reset();
     return bytes;
   }
 
-  Future<List<int>> generateShift(
-      {required Map<String, dynamic> shiftData, required String time}) async {
+  Future<List<int>> generateShift({
+    required Map<String, dynamic> shiftData,
+    required String time,
+    bool isSound = true,
+  }) async {
     Shift shift = Shift.fromJson(shiftData);
     final profile1 = await CapabilityProfile.load();
     final generator = Generator(paperSize, profile ?? profile1);
@@ -259,7 +268,9 @@ class MostbytePrint {
     bytes += generator.text(time);
     bytes += generator.feed(2);
     bytes += generator.cut();
-    bytes += generator.beep();
+    if (isSound) {
+      bytes += generator.beep();
+    }
     return bytes;
   }
 
@@ -277,6 +288,8 @@ class MostbytePrint {
       required double discount,
       required double percent,
       required String orderType,
+      bool is58mm = false,
+      bool isSound = true,
       Image? barcodeImg,
       int? hours,
       int? minutes,
@@ -296,20 +309,60 @@ class MostbytePrint {
     final profile1 = await CapabilityProfile.load();
     final generator = Generator(paperSize, profile ?? profile1);
     List<int> bytes = [];
+    int maxCharsPerLine = is58mm ? 32 : 40;
+
+    // --- 1. Split the text into lines that fit printer width ---
+    List<String> wrap(String s, int max) {
+      final words = s.split(RegExp(r'\s+'));
+      final lines = <String>[];
+      var buf = '';
+      for (final w in words) {
+        if (buf.isEmpty) {
+          buf = w;
+        } else if ((buf.length + 1 + w.length) <= max) {
+          buf = '$buf $w';
+        } else {
+          lines.add(buf);
+          buf = w;
+        }
+      }
+      if (buf.isNotEmpty) lines.add(buf);
+      return lines;
+    }
+
+    String padCenter(String line, int width) {
+      if (line.length >= width) return line;
+      final left = ((width - line.length) / 2).floor();
+      return ' ' * left + line; // pad with spaces on the left
+    }
+
+    String sanitize(String s) => s
+        .replaceAll('\u00A0', ' ') // NBSP -> space
+        .replaceAll(RegExp(r'[\u0000-\u001F\u007F]'), '');
+
+    final lines = wrap(companyName, maxCharsPerLine);
+
     bytes += generator.setGlobalCodeTable("CP866");
-    bytes += generator.row([
-      PosColumn(width: 1),
-      PosColumn(
-          textEncoded: await getEncoded(
-            companyName,
-          ), //companyName
-          styles: const PosStyles(
-              align: PosAlign.center,
-              width: PosTextSize.size2,
-              height: PosTextSize.size2,
-              bold: true),
-          width: 11)
-    ]);
+    for (final raw in lines) {
+      final padded = padCenter(sanitize(raw), maxCharsPerLine);
+
+      // Encode your text to CP866 or Windows-1251 (try CP866 first)
+      List<int> encodedBytes = await CharsetConverter.encode('CP866', padded);
+
+      // ✅ Convert to Uint8List before passing to textEncoded
+      Uint8List encoded = Uint8List.fromList(encodedBytes);
+
+      bytes.addAll(generator.textEncoded(
+        encoded,
+        styles: const PosStyles(
+          align: PosAlign.center,
+          bold: true,
+          width: PosTextSize.size1,
+          height: PosTextSize.size2,
+          // codeTable: PosCodeTable.pc866_cyrillic,
+        ),
+      ));
+    }
     bytes += generator.row([
       PosColumn(width: 1),
       PosColumn(
@@ -484,7 +537,9 @@ class MostbytePrint {
 
     bytes += generator.feed(2);
     bytes += generator.cut();
-    bytes += generator.beep();
+    if (isSound) {
+      bytes += generator.beep();
+    }
     bytes += generator.reset();
     return bytes;
   }
