@@ -1,5 +1,7 @@
 import 'package:example/demo.dart';
 import 'package:flutter/material.dart';
+import 'package:mostbyte_print/enums/connection_type.dart';
+import 'package:mostbyte_print/esc_pos/esc_pos_utils_plus.dart';
 import 'package:mostbyte_print/print.dart';
 
 void main() {
@@ -47,20 +49,30 @@ class _MyHomePageState extends State<MyHomePage> {
     // Ensure that you are calling services only from the main isolate
     // If needed, wrap your isolate function within the `compute` function.
     var mostbytePrint = MostbytePrint(
-      ip: '192.168.5.155',
-      name: 'kassa',
-    );
+        connectionType: ConnectionType.usb,
+        printerName: "XP-58C",
+        name: 'kassa',
+        paperSize: PaperSize.mm58);
     var sss = await mostbytePrint.testTicket();
     var ticket = await mostbytePrint.generateReciept(
+        orderType: "in_place",
+        transferByCard: 0,
         orderNum: 3,
         orderId: 3342,
         comment: "Бар",
         employee: "Surayyo",
         percent: 12,
-        time: DateTime.now().toString(),
+        time: "2024-11-27 12:34:44",
         orders: [
-          {"name": "adsfasf", "price": 45000, "amount": 4.6},
-          {"name": "adsfasf", "price": 45000, "amount": 4.6}
+          {"name": "adsfasf", "price": 5000, "amount": 4.6, "isVisible": true},
+          {
+            "name": "adsfas23f",
+            "price": 4000,
+            "amount": 2.6,
+            "isVisible": true
+          },
+          {"name": "333", "price": 15000, "amount": 4, "isVisible": false},
+          {"name": "r4234", "price": 25000, "amount": 42.33, "isVisible": true}
         ],
         hours: 3,
         minutes: 3,
@@ -72,7 +84,7 @@ class _MyHomePageState extends State<MyHomePage> {
         cash: 90000,
         terminal: 50000,
         discount: 10000,
-        companyName: "Turkiston");
+        companyName: "Turkiston milliy taomlari kafesi");
 
     // var ticket = await mostbytePrint.generateReciept(
     //   department: "desktop $i",

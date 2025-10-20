@@ -4,19 +4,27 @@ import 'dart:typed_data';
 
 import 'package:charset_converter/charset_converter.dart';
 import 'package:flutter_esc_pos_network/flutter_esc_pos_network.dart';
+import 'package:mostbyte_print/enums/connection_type.dart';
 import 'package:mostbyte_print/esc_pos/esc_pos_utils_plus.dart';
 import 'package:intl/intl.dart';
 import 'package:image/image.dart';
+import 'package:usb_esc_printer_windows/usb_esc_printer_windows.dart'
+    as usb_esc_printer_windows;
+
 import './models/data_models/data_models.dart';
 
 class MostbytePrint {
+  ConnectionType connectionType = ConnectionType.network;
+  String? printerName;
   PaperSize paperSize;
-  String ip;
+  String? ip;
   String name;
   CapabilityProfile? profile;
 
   MostbytePrint(
-      {required this.ip,
+      {this.ip,
+      required this.connectionType,
+      this.printerName,
       required this.name,
       this.paperSize = PaperSize.mm80,
       this.profile});
@@ -288,7 +296,6 @@ class MostbytePrint {
       required double discount,
       required double percent,
       required String orderType,
-      bool is58mm = false,
       bool isSound = true,
       Image? barcodeImg,
       int? hours,
@@ -309,7 +316,7 @@ class MostbytePrint {
     final profile1 = await CapabilityProfile.load();
     final generator = Generator(paperSize, profile ?? profile1);
     List<int> bytes = [];
-    int maxCharsPerLine = is58mm ? 32 : 40;
+    int maxCharsPerLine = paperSize == PaperSize.mm58 ? 32 : 40;
 
     // --- 1. Split the text into lines that fit printer width ---
     List<String> wrap(String s, int max) {
@@ -403,16 +410,16 @@ class MostbytePrint {
       bytes += generator.row([
         PosColumn(
           text: "",
-          width: 4,
+          width: paperSize == PaperSize.mm58 ? 1 : 4,
         ),
         PosColumn(
           text:
               "${orderItem["amount"]} * ${formattedNumber(double.parse(orderItem["price"].toString()))}",
-          width: 4,
+          width: paperSize == PaperSize.mm58 ? 6 : 4,
         ),
         PosColumn(
           text: "${formattedNumber(orderItem["amount"] * orderItem["price"])}",
-          width: 4,
+          width: paperSize == PaperSize.mm58 ? 5 : 4,
         )
       ]);
       // bytes += generator.textEncoded(await getEncoded(orderItem),
@@ -434,15 +441,15 @@ class MostbytePrint {
       bytes += generator.row([
         PosColumn(
           text: "",
-          width: 4,
+          width: paperSize == PaperSize.mm58 ? 1 : 4,
         ),
         PosColumn(
           text: "${hours ?? 1}:${minutes} * ${formattedNumber(tablePrice)}",
-          width: 4,
+          width: paperSize == PaperSize.mm58 ? 6 : 4,
         ),
         PosColumn(
           text: "${formattedNumber(tableTotalPrice)}",
-          width: 4,
+          width: paperSize == PaperSize.mm58 ? 5 : 4,
         )
       ]);
     }
@@ -535,7 +542,7 @@ class MostbytePrint {
     //     height: 50,
     //     align: PosAlign.center);
 
-    bytes += generator.feed(2);
+    // bytes += generator.feed(2);
     bytes += generator.cut();
     if (isSound) {
       bytes += generator.beep();
@@ -546,21 +553,36 @@ class MostbytePrint {
 
   Future<bool> printTicket(List<int> ticket) async {
     final stopwatch = Stopwatch()..start();
-    final printer = PrinterNetworkManager(ip);
-    PosPrintResult connect =
-        await printer.connect(timeout: Duration(seconds: 2));
+    if (connectionType == ConnectionType.usb) {
+      if (printerName == null) {
+        print('Printer name is not provided for USB connection.');
+        return false;
+      }
+      await usb_esc_printer_windows.sendPrintRequest(ticket, printerName!);
+      print('USB printing is not supported in this method yet.');
+    } else if (connectionType == ConnectionType.network) {
+      if (ip == null) {
+        print('Printer name is not provided for USB connection.');
+        return false;
+      }
+      final printer = PrinterNetworkManager(ip!);
 
-    stopwatch.stop();
-    print(
-        'Время выполнения подключения с $ip :${stopwatch.elapsedMilliseconds} мс');
-    stopwatch.start();
-    if (connect == PosPrintResult.success) {
-      PosPrintResult printing = await printer.printTicket(ticket);
+      PosPrintResult connect =
+          await printer.connect(timeout: Duration(seconds: 2));
 
-      printer.disconnect();
       stopwatch.stop();
-      print('Время выполнения print $ip :${stopwatch.elapsedMilliseconds} мс');
-      return printing.msg == "Success" ? true : false;
+      print(
+          'Время выполнения подключения с $ip :${stopwatch.elapsedMilliseconds} мс');
+      stopwatch.start();
+      if (connect == PosPrintResult.success) {
+        PosPrintResult printing = await printer.printTicket(ticket);
+
+        printer.disconnect();
+        stopwatch.stop();
+        print(
+            'Время выполнения print $ip :${stopwatch.elapsedMilliseconds} мс');
+        return printing.msg == "Success" ? true : false;
+      }
     }
     stopwatch.stop();
     print('Время выполнения не print $ip :${stopwatch.elapsedMilliseconds} мс');
