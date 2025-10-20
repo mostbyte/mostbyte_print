@@ -15,16 +15,14 @@ import './models/data_models/data_models.dart';
 
 class MostbytePrint {
   ConnectionType connectionType = ConnectionType.network;
-  String? printerName;
   PaperSize paperSize;
-  String? ip;
+  String ip;
   String name;
   CapabilityProfile? profile;
 
   MostbytePrint(
-      {this.ip,
+      {required this.ip,
       required this.connectionType,
-      this.printerName,
       required this.name,
       this.paperSize = PaperSize.mm80,
       this.profile});
@@ -554,18 +552,10 @@ class MostbytePrint {
   Future<bool> printTicket(List<int> ticket) async {
     final stopwatch = Stopwatch()..start();
     if (connectionType == ConnectionType.usb) {
-      if (printerName == null) {
-        print('Printer name is not provided for USB connection.');
-        return false;
-      }
-      await usb_esc_printer_windows.sendPrintRequest(ticket, printerName!);
+      await usb_esc_printer_windows.sendPrintRequest(ticket, name);
       print('USB printing is not supported in this method yet.');
     } else if (connectionType == ConnectionType.network) {
-      if (ip == null) {
-        print('Printer name is not provided for USB connection.');
-        return false;
-      }
-      final printer = PrinterNetworkManager(ip!);
+      final printer = PrinterNetworkManager(ip);
 
       PosPrintResult connect =
           await printer.connect(timeout: Duration(seconds: 2));
