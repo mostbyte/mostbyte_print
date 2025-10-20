@@ -8,4 +8,5 @@ export './src/pos_column.dart';
 export './src/pos_styles.dart';
 export './src/qrcode.dart';
 export './src/generator.dart';
+export './src/usb_esc_printer_windows_bindings_generated.dart';
 export './src/extensions.dart';

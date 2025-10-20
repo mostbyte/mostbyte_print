@@ -8,8 +8,7 @@ import 'package:mostbyte_print/enums/connection_type.dart';
 import 'package:mostbyte_print/esc_pos/esc_pos_utils_plus.dart';
 import 'package:intl/intl.dart';
 import 'package:image/image.dart';
-import 'package:usb_esc_printer_windows/usb_esc_printer_windows.dart'
-    as usb_esc_printer_windows;
+import './usb_esc_printer_windows.dart' as usb_esc_printer_windows;
 
 import './models/data_models/data_models.dart';
 

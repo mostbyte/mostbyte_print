@@ -51,7 +51,7 @@ class _MyHomePageState extends State<MyHomePage> {
     var mostbytePrint = MostbytePrint(
         connectionType: ConnectionType.usb,
         ip: "192.168.5.156",
-        name: 'kassa',
+        name: 'XP-58C',
         paperSize: PaperSize.mm58);
     var sss = await mostbytePrint.testTicket();
     var ticket = await mostbytePrint.generateReciept(
