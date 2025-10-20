@@ -13,7 +13,7 @@ import './usb_esc_printer_windows.dart' as usb_esc_printer_windows;
 import './models/data_models/data_models.dart';
 
 class MostbytePrint {
-  ConnectionType connectionType = ConnectionType.network;
+  ConnectionType connectionType;
   PaperSize paperSize;
   String ip;
   String name;
@@ -21,7 +21,7 @@ class MostbytePrint {
 
   MostbytePrint(
       {required this.ip,
-      required this.connectionType,
+      this.connectionType = ConnectionType.network,
       required this.name,
       this.paperSize = PaperSize.mm80,
       this.profile});
