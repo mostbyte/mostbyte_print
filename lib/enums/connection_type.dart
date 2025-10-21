@@ -6,3 +6,7 @@ ConnectionType ConnectionTypefromString(String value) {
     orElse: () => throw Exception('Unknown status: $value'),
   );
 }
+
+String toStingConnectionType(ConnectionType type) {
+  return type.toString().split('.').last;
+}
