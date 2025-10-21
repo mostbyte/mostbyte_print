@@ -1,6 +1,9 @@
 enum PosAlign { left, center, right }
+
 enum PosCutMode { full, partial }
+
 enum PosFontType { fontA, fontB }
+
 enum PosDrawer { pin2, pin5 }
 
 /// Choose image printing function
@@ -40,6 +43,19 @@ class PaperSize {
       return 576;
     }
     // value == PaperSize.mm58.value ? 384 : 558;
+  }
+
+  getFromString(String size) {
+    switch (size) {
+      case '58':
+        return PaperSize.mm58;
+      case '72':
+        return PaperSize.mm72;
+      case '80':
+        return PaperSize.mm80;
+      default:
+        return PaperSize.mm80;
+    }
   }
 }
 
