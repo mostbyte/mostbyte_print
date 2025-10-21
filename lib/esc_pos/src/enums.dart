@@ -28,6 +28,7 @@ class PosTextSize {
 }
 
 class PaperSize {
+  PaperSize({required this.value});
   const PaperSize._internal(this.value);
   final int value;
   static const mm58 = PaperSize._internal(1);
@@ -45,7 +46,18 @@ class PaperSize {
     // value == PaperSize.mm58.value ? 384 : 558;
   }
 
-  getFromString(String size) {
+  @override
+  toString() {
+    if (value == PaperSize.mm58.value) {
+      return '58';
+    } else if (value == PaperSize.mm72.value) {
+      return '72';
+    } else {
+      return '80';
+    }
+  }
+
+  PaperSize getFromString(String size) {
     switch (size) {
       case '58':
         return PaperSize.mm58;
