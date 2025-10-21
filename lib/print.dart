@@ -551,7 +551,7 @@ class MostbytePrint {
   Future<bool> printTicket(List<int> ticket) async {
     final stopwatch = Stopwatch()..start();
     if (connectionType == ConnectionType.usb) {
-      await usb_esc_printer_windows.sendPrintRequest(ticket, name);
+      await usb_esc_printer_windows.sendPrintRequest(ticket, ip);
       print('USB printing is not supported in this method yet.');
     } else if (connectionType == ConnectionType.network) {
       final printer = PrinterNetworkManager(ip);
