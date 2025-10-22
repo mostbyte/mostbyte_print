@@ -77,14 +77,14 @@ class _MyHomePageState extends State<MyHomePage> {
         hours: 3,
         minutes: 3,
         tableName: "kabina 2",
-        tablePrice: 25000,
+        tablePrice: 250000,
         createdAt: "2024-11-27 12:34:44",
         closedAt: "2024-11-27 14:24:14",
-        allSum: 140000,
-        cash: 90000,
-        terminal: 50000,
-        discount: 10000,
-        companyName: "Turkiston milliy taomlari kafesi");
+        allSum: 1400000,
+        cash: 900000,
+        terminal: 500000,
+        discount: 100000,
+        companyName: "Turkiston ");
 
     // var ticket = await mostbytePrint.generateReciept(
     //   department: "desktop $i",
@@ -98,7 +98,7 @@ class _MyHomePageState extends State<MyHomePage> {
     //   ],
     // );
 
-    await mostbytePrint.printTicket(sss);
+    await mostbytePrint.printTicket(ticket);
   }
 
   @override

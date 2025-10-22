@@ -515,19 +515,44 @@ class MostbytePrint {
       )
     ]);
     // bytes += generator.reset();
-    bytes += generator.row([
-      PosColumn(width: 1),
-      PosColumn(
-          textEncoded: await getEncoded(
-              // "Итого: ${formattedNumber(allSum - discount + tableTotalPrice)}"), //companyName
-              "Итого: ${formattedNumber(double.parse(((allSum - discount + tableTotalPrice) / 100).toStringAsFixed(2)).round() * 100)}"), //companyName
-          styles: const PosStyles(
-              align: PosAlign.center,
-              width: PosTextSize.size2,
-              height: PosTextSize.size2,
-              bold: true),
-          width: 11)
-    ]);
+    maxCharsPerLine = paperSize.value == PaperSize.mm58.value ? 17 : 25;
+    final line = wrap(
+        "Итого: ${formattedNumber(double.parse(((allSum - discount + tableTotalPrice) / 100).toStringAsFixed(2)).round() * 100)}",
+        maxCharsPerLine);
+
+    bytes += generator.setGlobalCodeTable("CP866");
+    for (final raw in line) {
+      final padded = padCenter(sanitize(raw), maxCharsPerLine);
+
+      // Encode your text to CP866 or Windows-1251 (try CP866 first)
+      List<int> encodedBytes = await CharsetConverter.encode('CP866', padded);
+
+      // ✅ Convert to Uint8List before passing to textEncoded
+      Uint8List encoded = Uint8List.fromList(encodedBytes);
+
+      bytes.addAll(generator.textEncoded(
+        encoded,
+        styles: const PosStyles(
+          align: PosAlign.center,
+          bold: true,
+          width: PosTextSize.size2,
+          height: PosTextSize.size2,
+          // codeTable: PosCodeTable.pc866_cyrillic,
+        ),
+      ));
+    }
+    // bytes += generator.row([
+    //   PosColumn(
+    //       textEncoded: await getEncoded(
+    //           // "Итого: ${formattedNumber(allSum - discount + tableTotalPrice)}"), //companyName
+    //           ), //companyName
+    //       styles: const PosStyles(
+    //           align: PosAlign.center,
+    //           width: PosTextSize.size2,
+    //           height: PosTextSize.size2,
+    //           bold: true),
+    //       width: 12)
+    // ]);
 
     bytes += generator.feed(2);
     if (barcodeImg != null) {
