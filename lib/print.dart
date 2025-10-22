@@ -313,7 +313,7 @@ class MostbytePrint {
     final profile1 = await CapabilityProfile.load();
     final generator = Generator(paperSize, profile ?? profile1);
     List<int> bytes = [];
-    int maxCharsPerLine = paperSize == PaperSize.mm58 ? 32 : 40;
+    int maxCharsPerLine = paperSize.value == PaperSize.mm58.value ? 32 : 40;
 
     // --- 1. Split the text into lines that fit printer width ---
     List<String> wrap(String s, int max) {
@@ -407,16 +407,16 @@ class MostbytePrint {
       bytes += generator.row([
         PosColumn(
           text: "",
-          width: paperSize == PaperSize.mm58 ? 1 : 4,
+          width: paperSize.value == PaperSize.mm58.value ? 1 : 4,
         ),
         PosColumn(
           text:
               "${orderItem["amount"]} * ${formattedNumber(double.parse(orderItem["price"].toString()))}",
-          width: paperSize == PaperSize.mm58 ? 6 : 4,
+          width: paperSize.value == PaperSize.mm58.value ? 6 : 4,
         ),
         PosColumn(
           text: "${formattedNumber(orderItem["amount"] * orderItem["price"])}",
-          width: paperSize == PaperSize.mm58 ? 5 : 4,
+          width: paperSize.value == PaperSize.mm58.value ? 5 : 4,
         )
       ]);
       // bytes += generator.textEncoded(await getEncoded(orderItem),
@@ -438,15 +438,15 @@ class MostbytePrint {
       bytes += generator.row([
         PosColumn(
           text: "",
-          width: paperSize == PaperSize.mm58 ? 1 : 4,
+          width: paperSize.value == PaperSize.mm58.value ? 1 : 4,
         ),
         PosColumn(
           text: "${hours ?? 1}:${minutes} * ${formattedNumber(tablePrice)}",
-          width: paperSize == PaperSize.mm58 ? 6 : 4,
+          width: paperSize.value == PaperSize.mm58.value ? 6 : 4,
         ),
         PosColumn(
           text: "${formattedNumber(tableTotalPrice)}",
-          width: paperSize == PaperSize.mm58 ? 5 : 4,
+          width: paperSize.value == PaperSize.mm58.value ? 5 : 4,
         )
       ]);
     }
