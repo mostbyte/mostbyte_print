@@ -50,7 +50,7 @@ class _MyHomePageState extends State<MyHomePage> {
     // If needed, wrap your isolate function within the `compute` function.
     var mostbytePrint = MostbytePrint(
         connectionType: ConnectionType.usb,
-        ip: "192.168.5.156",
+        ip: "XP-58C",
         name: 'XP-58C',
         paperSize: PaperSize.mm58);
     var sss = await mostbytePrint.testTicket();
@@ -98,7 +98,7 @@ class _MyHomePageState extends State<MyHomePage> {
     //   ],
     // );
 
-    await mostbytePrint.printTicket(ticket);
+    await mostbytePrint.printTicket(sss);
   }
 
   @override
