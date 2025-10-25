@@ -1,13 +1,16 @@
 library print;
 
+import 'dart:ffi';
 import 'dart:typed_data';
 
 import 'package:charset_converter/charset_converter.dart';
+import 'package:ffi/ffi.dart';
 import 'package:flutter_esc_pos_network/flutter_esc_pos_network.dart';
 import 'package:mostbyte_print/enums/connection_type.dart';
 import 'package:mostbyte_print/esc_pos/esc_pos_utils_plus.dart';
 import 'package:intl/intl.dart';
 import 'package:image/image.dart';
+import 'package:win32/win32.dart';
 import './usb_esc_printer_windows.dart' as usb_esc_printer_windows;
 
 import './models/data_models/data_models.dart';
@@ -583,13 +586,69 @@ class MostbytePrint {
     return bytes;
   }
 
+  void printRawData(String printerName, List<int> data) {
+    final printerNamePtr = printerName.toNativeUtf16();
+    final phPrinter = calloc<HANDLE>();
+
+    // 1. Open printer
+    final openResult = OpenPrinter(printerNamePtr, phPrinter, nullptr);
+    if (openResult == 0) {
+      print('Failed to open printer: ${GetLastError()}');
+      calloc.free(printerNamePtr);
+      calloc.free(phPrinter);
+      return;
+    }
+
+    // 2. Start document
+    final docInfo = calloc<DOC_INFO_1>()
+      ..ref.pDocName = 'ESC/POS RAW Document'.toNativeUtf16()
+      ..ref.pOutputFile = nullptr
+      ..ref.pDatatype = 'RAW'.toNativeUtf16();
+
+    if (StartDocPrinter(phPrinter.value, 1, docInfo) == 0) {
+      print('Failed to start document: ${GetLastError()}');
+      ClosePrinter(phPrinter.value);
+      calloc.free(printerNamePtr);
+      calloc.free(phPrinter);
+      calloc.free(docInfo);
+      return;
+    }
+
+    StartPagePrinter(phPrinter.value);
+
+    // 3. Send RAW content
+    final lpData = calloc<Uint8>(data.length);
+    for (var i = 0; i < data.length; i++) {
+      lpData[i] = data[i];
+    }
+
+    final bytesWritten = calloc<Uint32>();
+    WritePrinter(phPrinter.value, lpData, data.length, bytesWritten);
+
+    // 4. End print job
+    EndPagePrinter(phPrinter.value);
+    EndDocPrinter(phPrinter.value);
+    ClosePrinter(phPrinter.value);
+
+    // 5. Cleanup
+    calloc.free(printerNamePtr);
+    calloc.free(phPrinter);
+    calloc.free(lpData);
+    calloc.free(bytesWritten);
+    calloc.free(docInfo);
+
+    print('Print completed!');
+  }
+
   Future<bool> printTicket(List<int> ticket) async {
     final stopwatch = Stopwatch()..start();
     if (connectionType == ConnectionType.usb) {
       try {
-        await usb_esc_printer_windows.sendPrintRequest(ticket, ip);
-        print('USB printing is not supported in this method yet.');
+        final escReset = [0x1B, 0x40]; // ESC @ reset
+        final cut = [0x1D, 0x56, 0x00];
 
+        final data = [...escReset, ...ticket, ...cut];
+        printRawData(ip, data);
         stopwatch.stop();
         print(
             'Время выполнения не print $ip :${stopwatch.elapsedMilliseconds} мс');
