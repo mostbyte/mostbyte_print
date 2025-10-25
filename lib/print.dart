@@ -586,8 +586,20 @@ class MostbytePrint {
   Future<bool> printTicket(List<int> ticket) async {
     final stopwatch = Stopwatch()..start();
     if (connectionType == ConnectionType.usb) {
-      await usb_esc_printer_windows.sendPrintRequest(ticket, ip);
-      print('USB printing is not supported in this method yet.');
+      try {
+        await usb_esc_printer_windows.sendPrintRequest(ticket, ip);
+        print('USB printing is not supported in this method yet.');
+
+        stopwatch.stop();
+        print(
+            'Время выполнения не print $ip :${stopwatch.elapsedMilliseconds} мс');
+      } catch (e) {
+        stopwatch.stop();
+        print(
+            'Время выполнения не print $ip :${stopwatch.elapsedMilliseconds} мс');
+        print('Ошибка при печати по USB: $e');
+      }
+      return true;
     } else if (connectionType == ConnectionType.network) {
       final printer = PrinterNetworkManager(ip);
 
