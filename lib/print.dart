@@ -390,8 +390,10 @@ class MostbytePrint {
     }
     bytes += generator
         .textEncoded(await getEncoded("Ответственный: $employee")); // emopoyee
-    bytes += generator
-        .textEncoded(await getEncoded("Коммент: ${comment ?? ""}")); // comment
+    if (comment != null && comment.isNotEmpty) {
+      bytes += generator
+          .textEncoded(await getEncoded("Коммент: ${comment}")); // comment
+    }
     bytes += generator.hr();
     for (Map<String, dynamic> orderItem in orders) {
       if (!orderItem["isVisible"]) continue;
@@ -452,17 +454,19 @@ class MostbytePrint {
     }
 
     bytes += generator.hr();
-    bytes += generator.row([
-      PosColumn(
-        textEncoded: await getEncoded("Обслуживание $percent%: "),
-        width: 9,
-      ),
-      PosColumn(
-        textEncoded: await getEncoded(
-            "${formattedNumber(allSum * percent / (100 + percent))}"),
-        width: 3,
-      )
-    ]);
+    if (percent > 0) {
+      bytes += generator.row([
+        PosColumn(
+          textEncoded: await getEncoded("Обслуживание $percent%: "),
+          width: 9,
+        ),
+        PosColumn(
+          textEncoded: await getEncoded(
+              "${formattedNumber(allSum * percent / (100 + percent))}"),
+          width: 3,
+        )
+      ]);
+    }
     bytes += generator.row([
       PosColumn(
         textEncoded: await getEncoded("Сумма заказа:"),
@@ -484,36 +488,42 @@ class MostbytePrint {
         width: 3,
       )
     ]);
-    bytes += generator.row([
-      PosColumn(
-        textEncoded: await getEncoded("Терминал:"),
-        width: 9,
-      ),
-      PosColumn(
-        textEncoded: await getEncoded("${formattedNumber(terminal)}"),
-        width: 3,
-      )
-    ]);
-    bytes += generator.row([
-      PosColumn(
-        textEncoded: await getEncoded("Перевод на карту:"),
-        width: 9,
-      ),
-      PosColumn(
-        textEncoded: await getEncoded("${formattedNumber(transferByCard)}"),
-        width: 3,
-      )
-    ]);
-    bytes += generator.row([
-      PosColumn(
-        textEncoded: await getEncoded("Скидка:"),
-        width: 9,
-      ),
-      PosColumn(
-        textEncoded: await getEncoded("${formattedNumber(discount)}"),
-        width: 3,
-      )
-    ]);
+    if (terminal > 0) {
+      bytes += generator.row([
+        PosColumn(
+          textEncoded: await getEncoded("Терминал:"),
+          width: 9,
+        ),
+        PosColumn(
+          textEncoded: await getEncoded("${formattedNumber(terminal)}"),
+          width: 3,
+        )
+      ]);
+    }
+    if (transferByCard > 0) {
+      bytes += generator.row([
+        PosColumn(
+          textEncoded: await getEncoded("Перевод на карту:"),
+          width: 9,
+        ),
+        PosColumn(
+          textEncoded: await getEncoded("${formattedNumber(transferByCard)}"),
+          width: 3,
+        )
+      ]);
+    }
+    if (discount > 0) {
+      bytes += generator.row([
+        PosColumn(
+          textEncoded: await getEncoded("Скидка:"),
+          width: 9,
+        ),
+        PosColumn(
+          textEncoded: await getEncoded("${formattedNumber(discount)}"),
+          width: 3,
+        )
+      ]);
+    }
     // bytes += generator.reset();
     maxCharsPerLine = paperSize.value == PaperSize.mm58.value ? 17 : 25;
     final line = wrap(
