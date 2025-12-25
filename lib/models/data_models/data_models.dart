@@ -1,5 +1,6 @@
 export './earned.dart';
 export './earned_data.dart';
+export './prepayment_data.dart';
 export './shift.dart';
 export './user.dart';
 export './filial.dart';
