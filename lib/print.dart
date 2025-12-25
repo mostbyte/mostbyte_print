@@ -1,5 +1,7 @@
 library print;
 
+export 'package:mostbyte_print/enums/cyrillic_encoding.dart';
+
 import 'dart:ffi';
 import 'dart:typed_data';
 
@@ -7,6 +9,7 @@ import 'package:charset_converter/charset_converter.dart';
 import 'package:ffi/ffi.dart';
 import 'package:flutter_esc_pos_network/flutter_esc_pos_network.dart';
 import 'package:mostbyte_print/enums/connection_type.dart';
+import 'package:mostbyte_print/enums/cyrillic_encoding.dart';
 import 'package:mostbyte_print/esc_pos/esc_pos_utils_plus.dart';
 import 'package:intl/intl.dart';
 import 'package:image/image.dart';
@@ -22,12 +25,39 @@ class MostbytePrint {
   String name;
   CapabilityProfile? profile;
 
-  MostbytePrint(
-      {required this.ip,
-      this.connectionType = ConnectionType.network,
-      required this.name,
-      this.paperSize = PaperSize.mm80,
-      this.profile});
+  /// Кодировка для кириллицы.
+  /// По умолчанию `auto` - автоматически определяется на основе имени принтера.
+  /// Для RONGTA автоматически выбирается CP1251.
+  CyrillicEncoding cyrillicEncoding;
+
+  /// Кэшированная реальная кодировка (определённая из auto или заданная явно)
+  CyrillicEncoding? _resolvedEncoding;
+
+  MostbytePrint({
+    required this.ip,
+    this.connectionType = ConnectionType.network,
+    required this.name,
+    this.paperSize = PaperSize.mm80,
+    this.profile,
+    this.cyrillicEncoding = CyrillicEncoding.auto,
+  });
+
+  /// Возвращает реальную кодировку (разрешает auto в конкретное значение)
+  CyrillicEncoding get resolvedEncoding {
+    if (_resolvedEncoding != null) return _resolvedEncoding!;
+
+    if (cyrillicEncoding == CyrillicEncoding.auto) {
+      // Определяем на основе имени принтера и профиля
+      _resolvedEncoding = detectBestEncoding(
+        profile?.name ?? name,
+        name,
+      );
+    } else {
+      _resolvedEncoding = cyrillicEncoding;
+    }
+
+    return _resolvedEncoding!;
+  }
 
   NumberFormat numberFormatter = NumberFormat("#,##0", "en_US");
   String formattedNumber(double number) {
@@ -44,6 +74,62 @@ class MostbytePrint {
     return bytes;
   }
 
+  /// Тестовая печать кириллицы с разными code page для поиска правильной кодировки.
+  /// Печатает "Привет Мир" с code page от [startPage] до [endPage].
+  /// Используйте этот метод чтобы найти правильную кодировку для вашего принтера.
+  Future<List<int>> testCyrillicCodePages({
+    int startPage = 0,
+    int endPage = 50,
+  }) async {
+    final profile1 = await CapabilityProfile.load();
+    final generator = Generator(paperSize, profile ?? profile1);
+    List<int> bytes = [];
+
+    final testText = "Привет Мир";
+
+    bytes += generator.text('=== Cyrillic Code Page Test ===',
+        styles: const PosStyles(align: PosAlign.center));
+    bytes += generator.emptyLines(1);
+
+    // Тестируем CP866
+    bytes += generator.text('CP866 encoding:');
+    bytes += generator.setGlobalCodeTable('CP866');
+    bytes += generator.textEncoded(
+        await CharsetConverter.encode('CP866', testText));
+    bytes += generator.emptyLines(1);
+
+    // Тестируем CP1251
+    bytes += generator.text('CP1251 encoding:');
+    bytes += generator.setGlobalCodeTable('CP1251');
+    bytes += generator.textEncoded(
+        await CharsetConverter.encode('windows-1251', testText));
+    bytes += generator.emptyLines(1);
+
+    // Тестируем прямые code page номера с CP866 кодировкой
+    bytes += generator.text('Direct code pages (CP866 encoded):');
+    for (int page = startPage; page <= endPage; page++) {
+      // Устанавливаем code page напрямую через ESC t n
+      bytes += [0x1B, 0x74, page]; // ESC t n
+      bytes += generator.text('Page $page: ');
+      bytes += await CharsetConverter.encode('CP866', testText);
+      bytes += generator.emptyLines(1);
+    }
+
+    // Тестируем прямые code page номера с CP1251 кодировкой
+    bytes += generator.text('Direct code pages (CP1251 encoded):');
+    for (int page = startPage; page <= endPage; page++) {
+      // Устанавливаем code page напрямую через ESC t n
+      bytes += [0x1B, 0x74, page]; // ESC t n
+      bytes += generator.text('Page $page: ');
+      bytes += await CharsetConverter.encode('windows-1251', testText);
+      bytes += generator.emptyLines(1);
+    }
+
+    bytes += generator.feed(2);
+    bytes += generator.cut();
+    return bytes;
+  }
+
   Future<List<int>> generateOrderCheck({
     required int orderNum,
     required String type,
@@ -54,7 +140,7 @@ class MostbytePrint {
     final profile1 = await CapabilityProfile.load();
     final generator = Generator(paperSize, profile ?? profile1);
     List<int> bytes = [];
-    bytes += generator.setGlobalCodeTable("CP866");
+    bytes += generator.setGlobalCodeTable(codeTableName);
     bytes += generator.row([
       PosColumn(width: 1),
       PosColumn(
@@ -160,7 +246,7 @@ class MostbytePrint {
     final profile1 = await CapabilityProfile.load();
     final generator = Generator(paperSize, profile ?? profile1);
     List<int> bytes = [];
-    bytes += generator.setGlobalCodeTable("CP866");
+    bytes += generator.setGlobalCodeTable(codeTableName);
     bytes += generator.textEncoded(await getEncoded("Счет №: $orderId"),
         styles: const PosStyles(
             align: PosAlign.center,
@@ -199,6 +285,17 @@ class MostbytePrint {
     return bytes;
   }
 
+  /// Format ISO date string to readable format
+  String _formatShiftDate(String? isoDate) {
+    if (isoDate == null || isoDate.isEmpty) return '';
+    try {
+      final dateTime = DateTime.parse(isoDate).toLocal();
+      return DateFormat('dd.MM.yyyy HH:mm').format(dateTime);
+    } catch (e) {
+      return isoDate;
+    }
+  }
+
   Future<List<int>> generateShift({
     required Map<String, dynamic> shiftData,
     required String time,
@@ -209,73 +306,119 @@ class MostbytePrint {
     final generator = Generator(paperSize, profile ?? profile1);
     List<int> bytes = [];
 
-    // <p>ID смены: <b>${shift.id}</b></p>
-    // <p>Филиал: <b>${globals.userData!.filial!.name_ru}</b></p>
-    // <p>Начало: <b>${globals.dateDashTimeFormat(date: shift.openedAt, timezone: true)}</b></p>
-    // <p>Конец: <b>${globals.dateDashTimeFormat(date: shift.closedAt!, timezone: true)}</b></p>
-    // <p>Ответственный: <b>${shift.user.surname} ${shift.user.firstname}</b></p>
-    // <hr>
-    // <p class="total"> Сумма к сдаче</p>
-    // <p>Терминал: <b>${globals.formattedNumber(double.parse(shift.earned!['closed']['terminal'].toString()))}</b></p>
-    // <p>Наличка: <b>${globals.formattedNumber(double.parse((shift.earned!['closed']['sum'] - shift.earned!['closed']['terminal']).toString()))}</b></p>
-    // <p>Скидки: <b>${globals.formattedNumber(double.parse(shift.earned!['discount'].toString()))}</b></p>
-    // <p>Расходы: <b>${globals.formattedNumber(double.parse(shift.earned!['wasted'].toString()))}</b></p>
-    // <p>Общая сумма: <b>${globals.formattedNumber(double.parse((shift.earned?['closed']['sum'] - shift.earned?['wasted'] - shift.earned?['discount']).toString()))}</b></p>
-    // <hr>
-    // <p class="total"> Сумма Остатка в кассе</p>
-    // <p>Терминал: <b>${globals.formattedNumber(double.parse(shift.earned!['open']['terminal'].toString()))}</b></p>
-    // <p>Наличка: <b>${globals.formattedNumber(double.parse((shift.earned?['open']['sum'] - shift.earned?['open']['terminal']).toString()))}</b></p>
-    // <p>Общая сумма: <b>${globals.formattedNumber(double.parse(shift.earned!['open']['sum'].toString()))}</b></p>
+    bytes += generator.setGlobalCodeTable(codeTableName);
 
-    bytes += generator.setGlobalCodeTable("CP866");
+    // Header
     bytes += generator.textEncoded(await getEncoded("ID смены: ${shift.id}"));
-    bytes += generator
-        .textEncoded(await getEncoded("Филиал: ${shift.user.filial!.name_ru}"));
-    bytes +=
-        generator.textEncoded(await getEncoded("Начало: ${shift.openedAt}"));
-    bytes +=
-        generator.textEncoded(await getEncoded("Конец: ${shift.closedAt}"));
+    bytes += generator.textEncoded(
+        await getEncoded("Филиал: ${shift.user?.filial?.name_ru ?? ''}"));
+    bytes += generator.textEncoded(
+        await getEncoded("Начало: ${_formatShiftDate(shift.openedAt)}"));
+    bytes += generator.textEncoded(
+        await getEncoded("Конец: ${_formatShiftDate(shift.closedAt)}"));
     bytes += generator.textEncoded(await getEncoded(
-        "Ответственный: ${shift.user.surname} ${shift.user.firstname}"));
+        "Ответственный: ${shift.user?.surname ?? ''} ${shift.user?.firstname ?? ''}"));
     bytes += generator.hr();
 
-    bytes +=
-        generator.textEncoded(await getEncoded("Сумма к сдаче"), linesAfter: 1);
     if (shift.earned != null) {
-      bytes += generator.textEncoded(await getEncoded(
-          "Терминал: ${formattedNumber(double.parse(shift.earned!.closed.terminal.toString()))}"));
-      bytes += generator.textEncoded(await getEncoded(
-          "Перевод на карту: ${formattedNumber(double.parse(shift.earned!.closed.transferByCard.toString()))}"));
-      bytes += generator.textEncoded(await getEncoded(
-          "Наличка: ${formattedNumber(double.parse((shift.earned!.closed.sum - shift.earned!.closed.terminal - shift.earned!.closed.transferByCard).toString()))}"));
-      bytes += generator.textEncoded(await getEncoded(
-          "Скидки: ${formattedNumber(double.parse(shift.earned!.discount.toString()))}"));
-      bytes += generator.textEncoded(await getEncoded(
-          "Долги: ${formattedNumber(double.parse(shift.earned!.debt.toString()))}"));
-      bytes += generator.textEncoded(await getEncoded(
-          "Расходы: ${formattedNumber(double.parse(shift.earned!.wasted.toString()))}"));
-      bytes += generator.textEncoded(await getEncoded(
-          "Возвраты: ${formattedNumber(double.parse(shift.earned!.refund.sum.toString()))}"));
-      bytes += generator.textEncoded(await getEncoded(
-          "Общая сумма: ${formattedNumber(double.parse((shift.earned!.closed.sum - shift.earned!.wasted - shift.earned!.discount - shift.earned!.debt).toString()))}"));
+      final earned = shift.earned!;
 
+      // Closed orders section (Сумма к сдаче)
+      bytes += generator.textEncoded(
+          await getEncoded("СУММА К СДАЧЕ"), linesAfter: 1);
+      bytes += generator.textEncoded(
+          await getEncoded("Наличка: ${formattedNumber(earned.closed.sum)}"));
+      bytes += generator.textEncoded(
+          await getEncoded("Терминал: ${formattedNumber(earned.closed.terminal)}"));
+      bytes += generator.textEncoded(
+          await getEncoded("Перевод: ${formattedNumber(earned.closed.transferByCard)}"));
+
+      final closedTotal = earned.closed.sum + earned.closed.terminal + earned.closed.transferByCard;
+      bytes += generator.textEncoded(
+          await getEncoded("Итого: ${formattedNumber(closedTotal)}"));
       bytes += generator.hr();
 
-      bytes += generator.textEncoded(await getEncoded("Сумма Остатка в кассе"),
+      // Deductions section
+      bytes += generator.textEncoded(
+          await getEncoded("ВЫЧЕТЫ"), linesAfter: 1);
+      bytes += generator.textEncoded(
+          await getEncoded("Скидки: ${formattedNumber(earned.discount)}"));
+      bytes += generator.textEncoded(
+          await getEncoded("Долги: ${formattedNumber(earned.debt)}"));
+      bytes += generator.textEncoded(
+          await getEncoded("Расходы: ${formattedNumber(earned.wasted)}"));
+      bytes += generator.textEncoded(
+          await getEncoded("Возвраты: ${formattedNumber(earned.refund.sum)}"));
+
+      final deductionsTotal = earned.discount + earned.debt + earned.wasted + earned.refund.sum;
+      bytes += generator.textEncoded(
+          await getEncoded("Итого вычетов: ${formattedNumber(deductionsTotal)}"));
+      bytes += generator.hr();
+
+      // Open orders section (Остаток в кассе / Незакрытые)
+      bytes += generator.textEncoded(
+          await getEncoded("ОСТАТОК В КАССЕ"), linesAfter: 1);
+      bytes += generator.textEncoded(
+          await getEncoded("Наличка: ${formattedNumber(earned.open.sum)}"));
+      bytes += generator.textEncoded(
+          await getEncoded("Терминал: ${formattedNumber(earned.open.terminal)}"));
+      bytes += generator.textEncoded(
+          await getEncoded("Перевод: ${formattedNumber(earned.open.transferByCard)}"));
+
+      final openTotal = earned.open.sum + earned.open.terminal + earned.open.transferByCard;
+      bytes += generator.textEncoded(
+          await getEncoded("Итого: ${formattedNumber(openTotal)}"));
+      bytes += generator.hr();
+
+      // Prepayment section
+      if (earned.prepayment != null) {
+        final prepay = earned.prepayment!;
+        final prepayTotal = prepay.cash + prepay.terminal + prepay.transferByCard;
+        if (prepayTotal > 0) {
+          bytes += generator.textEncoded(
+              await getEncoded("ПРЕДОПЛАТЫ"), linesAfter: 1);
+          bytes += generator.textEncoded(
+              await getEncoded("Наличка: ${formattedNumber(prepay.cash)}"));
+          bytes += generator.textEncoded(
+              await getEncoded("Терминал: ${formattedNumber(prepay.terminal)}"));
+          bytes += generator.textEncoded(
+              await getEncoded("Перевод: ${formattedNumber(prepay.transferByCard)}"));
+          bytes += generator.textEncoded(
+              await getEncoded("Итого: ${formattedNumber(prepayTotal)}"));
+          bytes += generator.hr();
+        }
+      }
+
+      // Current amount section (entered by cashier)
+      if (earned.currentAmount != null) {
+        final current = earned.currentAmount!;
+        // sum is the total, cash = sum - terminal - transfer
+        final currentCash = current.sum - current.terminal - current.transferByCard;
+        bytes += generator.textEncoded(
+            await getEncoded("ФАКТ. СУММА В КАССЕ"), linesAfter: 1);
+        bytes += generator.textEncoded(
+            await getEncoded("Наличка: ${formattedNumber(currentCash)}"));
+        bytes += generator.textEncoded(
+            await getEncoded("Терминал: ${formattedNumber(current.terminal)}"));
+        bytes += generator.textEncoded(
+            await getEncoded("Перевод: ${formattedNumber(current.transferByCard)}"));
+        bytes += generator.textEncoded(
+            await getEncoded("Итого: ${formattedNumber(current.sum)}"));
+        bytes += generator.hr();
+      }
+
+      // Final totals
+      final netTotal = closedTotal - deductionsTotal;
+      bytes += generator.textEncoded(
+          await getEncoded("ЧИСТАЯ ВЫРУЧКА: ${formattedNumber(netTotal)}"),
           linesAfter: 1);
-      bytes += generator.textEncoded(await getEncoded(
-          "Терминал: ${formattedNumber(double.parse(shift.earned!.open.terminal.toString()))}"));
-      bytes += generator.textEncoded(await getEncoded(
-          "Перевод на карту: ${formattedNumber(double.parse(shift.earned!.open.transferByCard.toString()))}"));
-      bytes += generator.textEncoded(await getEncoded(
-          "Наличка: ${formattedNumber(double.parse((shift.earned!.open.sum - shift.earned!.open.terminal - shift.earned!.open.transferByCard).toString()))}"));
-      bytes += generator.textEncoded(await getEncoded(
-          "Общая сумма: ${formattedNumber(double.parse(shift.earned!.open.sum.toString()))}"));
     }
+
     bytes += generator.hr();
     bytes += generator.text(time);
     bytes += generator.feed(2);
     bytes += generator.cut();
+    bytes += generator.drawer();
     if (isSound) {
       bytes += generator.beep();
     }
@@ -349,12 +492,13 @@ class MostbytePrint {
 
     final lines = wrap(companyName, maxCharsPerLine);
 
-    bytes += generator.setGlobalCodeTable("CP866");
+    bytes += generator.setGlobalCodeTable(codeTableName);
     for (final raw in lines) {
       final padded = padCenter(sanitize(raw), maxCharsPerLine);
 
-      // Encode your text to CP866 or Windows-1251 (try CP866 first)
-      List<int> encodedBytes = await CharsetConverter.encode('CP866', padded);
+      // Encode text using selected Cyrillic encoding
+      List<int> encodedBytes =
+          await CharsetConverter.encode(resolvedEncoding.charsetName, padded);
 
       // ✅ Convert to Uint8List before passing to textEncoded
       Uint8List encoded = Uint8List.fromList(encodedBytes);
@@ -533,12 +677,13 @@ class MostbytePrint {
         "Итого: ${formattedNumber(double.parse(((allSum - discount + tableTotalPrice) / 100).toStringAsFixed(2)).round() * 100)}",
         maxCharsPerLine);
 
-    bytes += generator.setGlobalCodeTable("CP866");
+    bytes += generator.setGlobalCodeTable(codeTableName);
     for (final raw in line) {
       final padded = padCenter(sanitize(raw), maxCharsPerLine);
 
-      // Encode your text to CP866 or Windows-1251 (try CP866 first)
-      List<int> encodedBytes = await CharsetConverter.encode('CP866', padded);
+      // Encode text using selected Cyrillic encoding
+      List<int> encodedBytes =
+          await CharsetConverter.encode(resolvedEncoding.charsetName, padded);
 
       // ✅ Convert to Uint8List before passing to textEncoded
       Uint8List encoded = Uint8List.fromList(encodedBytes);
@@ -579,6 +724,7 @@ class MostbytePrint {
 
     // bytes += generator.feed(2);
     bytes += generator.cut();
+    bytes += generator.drawer();
     if (isSound) {
       bytes += generator.beep();
     }
@@ -685,7 +831,11 @@ class MostbytePrint {
   }
 
   Future<Uint8List> getEncoded(String text) async {
-    final encoded = await CharsetConverter.encode("CP866", text);
+    final encoded =
+        await CharsetConverter.encode(resolvedEncoding.charsetName, text);
     return encoded;
   }
+
+  /// Возвращает имя code table для ESC/POS команды setGlobalCodeTable
+  String get codeTableName => resolvedEncoding.codeTableName;
 }

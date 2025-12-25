@@ -1,26 +1,24 @@
-// part '../hive/filial.g.dart';
-
-class EarnedData {
-  double sum;
+class PrepaymentData {
+  double cash;
   double terminal;
   double transferByCard;
 
-  EarnedData({
-    required this.sum,
+  PrepaymentData({
+    required this.cash,
     required this.terminal,
     this.transferByCard = 0,
   });
 
-  factory EarnedData.fromJson(Map<String, dynamic> json) {
-    return EarnedData(
-      sum: (json["sum"] ?? 0).toDouble(),
+  factory PrepaymentData.fromJson(Map<String, dynamic> json) {
+    return PrepaymentData(
+      cash: (json["cash"] ?? 0).toDouble(),
       terminal: (json["terminal"] ?? 0).toDouble(),
       transferByCard: (json["transfer_by_card"] ?? 0).toDouble(),
     );
   }
 
   Map<String, dynamic> toJson() => {
-        "sum": sum,
+        "cash": cash,
         "terminal": terminal,
         "transfer_by_card": transferByCard,
       };
