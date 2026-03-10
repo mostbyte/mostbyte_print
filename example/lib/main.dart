@@ -52,8 +52,7 @@ class _MyHomePageState extends State<MyHomePage> {
         connectionType: ConnectionType.network,
         ip: "192.168.5.156",
         name: 'printer',
-        paperSize: PaperSize.mm80,
-        profileName: 'RP80USE');
+        paperSize: PaperSize.mm80);
     var sss = await mostbytePrint.testTicket();
     var ticket = await mostbytePrint.generateReciept(
         orderType: "in_place",

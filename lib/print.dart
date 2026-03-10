@@ -35,7 +35,7 @@ class MostbytePrint {
       required this.name,
       this.paperSize = PaperSize.mm80,
       this.profile,
-      this.profileName = 'default'});
+      this.profileName = 'RP80USE'});
 
   NumberFormat numberFormatter = NumberFormat("#,##0", "en_US");
   String formattedNumber(double number) {
@@ -109,8 +109,7 @@ class MostbytePrint {
     int startPage = 0,
     int endPage = 50,
   }) async {
-    final profile1 = await CapabilityProfile.load();
-    final generator = Generator(paperSize, profile ?? profile1);
+    final generator = await _createGenerator();
     List<int> bytes = [];
 
     final testText = "Привет Мир";
