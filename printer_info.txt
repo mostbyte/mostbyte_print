@@ -1,0 +1,35 @@
+Printer Details Transcribed from Images:
+
+Printer Brand/Type: Rongta Thermal Receipt Printer
+Model: RP328
+
+Hardware Capabilities (from device label):
+- Print Speed: 250mm/Sec
+- Paper Width: 80mm
+- Interface: USB + Serial + Ethernet
+- Power Input: 24V/2.5A
+- Command Support: ESC/POS
+- Serial Number: A328080000180289
+
+Printer Configuration (from test print settings):
+- Command mode: EPSON(ESC/POS)
+- Chinese character mode: No
+- Drawer control: Yes
+- Character per line: 48-fontA/64-fontB
+- Print Density: Light
+- Default code page: page 0 (PC437)
+- Firmware VERSION: AT407_V1.11 2021-05-17
+- CPUID: 10b45d20-69930000-08ec0709-00000100
+- HEAT DOT=640 ON=600 OFF=70
+- DEGREE: 22
+- MILAGE: 1044.68
+
+Network & Interface Configuration (from test print settings):
+- Interface details: USB & Serial 19200,None,8,1 | Ethernet (10Base/100Base)
+- DHCP: Disabled
+- Ethernet ID (MAC): a8-01-5d-20-02-ec
+- IP address: 192.168.5.156
+
+Character Code Table:
+- Default: PC437 [U.S.A., Standard Europe]
+- Supports multiple code pages including PC850, PC863, PC1251, PC864 (Arabic), etc.

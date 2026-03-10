@@ -19,9 +19,15 @@ class Earned {
 
   factory Earned.fromJson(Map<String, dynamic> json) {
     return Earned(
-      closed: EarnedData.fromJson(json["closed"]),
-      open: EarnedData.fromJson(json["open"]),
-      refund: EarnedData.fromJson(json["refund"]),
+      closed: json["closed"] != null
+          ? EarnedData.fromJson(json["closed"])
+          : EarnedData(sum: 0, terminal: 0),
+      open: json["open"] != null
+          ? EarnedData.fromJson(json["open"])
+          : EarnedData(sum: 0, terminal: 0),
+      refund: json["refund"] != null
+          ? EarnedData.fromJson(json["refund"])
+          : EarnedData(sum: 0, terminal: 0),
       debt: json["debt"],
       discount: json["discount"],
       wasted: json["wasted"],

@@ -26,7 +26,7 @@ class User {
   });
 
   bool isAnonymous() {
-    return role == 'ANONYMOUS';
+    return role?.role == 'ANONYMOUS';
   }
 
   factory User.fromJson(Map<String, dynamic> json) {
@@ -38,7 +38,9 @@ class User {
       filial: json["branch"] != null
           ? Filial.fromJson(Map<String, dynamic>.from(json["branch"]))
           : null,
-      company: Company.fromJson(Map<String, dynamic>.from(json["company"])),
+      company: json["company"] != null
+          ? Company.fromJson(Map<String, dynamic>.from(json["company"]))
+          : null,
       role: json["role"] != null
           ? Role.fromJson(Map<String, dynamic>.from(json["role"]))
           : null,
