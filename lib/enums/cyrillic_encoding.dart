@@ -15,7 +15,7 @@ extension CyrillicEncodingExtension on CyrillicEncoding {
   String get codeTableName {
     switch (this) {
       case CyrillicEncoding.auto:
-        return 'CP866'; // fallback, будет переопределено в MostbytePrint
+        return 'CP1251'; // fallback — works on most common printers
       case CyrillicEncoding.cp866:
         return 'CP866';
       case CyrillicEncoding.cp1251:
@@ -27,7 +27,7 @@ extension CyrillicEncodingExtension on CyrillicEncoding {
   String get charsetName {
     switch (this) {
       case CyrillicEncoding.auto:
-        return 'CP866'; // fallback, будет переопределено в MostbytePrint
+        return 'windows-1251'; // fallback — works on most common printers
       case CyrillicEncoding.cp866:
         return 'CP866';
       case CyrillicEncoding.cp1251:
@@ -43,34 +43,28 @@ CyrillicEncoding cyrillicEncodingFromString(String value) {
   );
 }
 
-/// Производители принтеров которые лучше работают с CP1251
-const Set<String> _cp1251Vendors = {
-  'xprinter',
+/// Профили/производители которые используют CP866
+const Set<String> _cp866Profiles = {
+  'default',    // Epson-совместимые
+  'TM-T88II',
+  'TM-T88III',
+  'TM-T88IV',
+  'TM-T88V',
 };
 
-/// Профили принтеров которые лучше работают с CP1251
-const Set<String> _cp1251Profiles = <String>{};
-
-/// Определяет лучшую кодировку на основе имени профиля или производителя
-/// RONGTA принтеры используют CP866 (code page 6/7)
+/// Определяет лучшую кодировку на основе имени профиля
+/// Большинство дешевых принтеров (Rongta, Zjiang, Xprinter) работают с CP1251
+/// Epson принтеры работают с CP866
 CyrillicEncoding detectBestEncoding(String? profileName, String? vendor) {
   final profileLower = profileName?.toLowerCase() ?? '';
-  final vendorLower = vendor?.toLowerCase() ?? '';
 
-  // Проверяем производителя для CP1251
-  for (final v in _cp1251Vendors) {
-    if (vendorLower.contains(v)) {
-      return CyrillicEncoding.cp1251;
+  // Epson и совместимые — CP866
+  for (final p in _cp866Profiles) {
+    if (profileLower == p.toLowerCase()) {
+      return CyrillicEncoding.cp866;
     }
   }
 
-  // Проверяем профиль для CP1251
-  for (final p in _cp1251Profiles) {
-    if (profileLower.contains(p)) {
-      return CyrillicEncoding.cp1251;
-    }
-  }
-
-  // По умолчанию CP866 (работает для большинства принтеров включая RONGTA)
-  return CyrillicEncoding.cp866;
+  // Все остальные (Rongta, Xprinter, Zjiang и т.д.) — CP1251
+  return CyrillicEncoding.cp1251;
 }

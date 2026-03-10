@@ -18,7 +18,6 @@ import 'package:win32/win32.dart';
 import './models/data_models/data_models.dart';
 
 class MostbytePrint {
-  static const String _cpEncoding = 'CP866';
   static const List<int> _escReset = [0x1B, 0x40];
   static const List<int> _cutCommand = [0x1D, 0x56, 0x00];
 
@@ -28,6 +27,7 @@ class MostbytePrint {
   String name;
   CapabilityProfile? profile;
   String profileName;
+  CyrillicEncoding cyrillicEncoding;
 
   MostbytePrint(
       {required this.ip,
@@ -35,7 +35,24 @@ class MostbytePrint {
       required this.name,
       this.paperSize = PaperSize.mm80,
       this.profile,
-      this.profileName = 'RP80USE'});
+      this.profileName = 'RP80USE',
+      this.cyrillicEncoding = CyrillicEncoding.auto});
+
+  /// Code table name for ESC/POS command (e.g. 'CP866', 'CP1251')
+  String get _codeTableName {
+    if (cyrillicEncoding == CyrillicEncoding.auto) {
+      return detectBestEncoding(profileName, null).codeTableName;
+    }
+    return cyrillicEncoding.codeTableName;
+  }
+
+  /// Charset name for CharsetConverter (e.g. 'CP866', 'windows-1251')
+  String get _charsetName {
+    if (cyrillicEncoding == CyrillicEncoding.auto) {
+      return detectBestEncoding(profileName, null).charsetName;
+    }
+    return cyrillicEncoding.charsetName;
+  }
 
   NumberFormat numberFormatter = NumberFormat("#,##0", "en_US");
   String formattedNumber(double number) {
@@ -81,7 +98,7 @@ class MostbytePrint {
     final generator = await _createGenerator();
     final now = DateFormat('yyyy-MM-dd HH:mm:ss').format(DateTime.now());
     List<int> bytes = [];
-    bytes += generator.setGlobalCodeTable(_cpEncoding);
+    bytes += generator.setGlobalCodeTable(_codeTableName);
     bytes += generator.text('Test page',
         styles: const PosStyles(
             align: PosAlign.center,
@@ -166,7 +183,7 @@ class MostbytePrint {
   }) async {
     final generator = await _createGenerator();
     List<int> bytes = [];
-    bytes += generator.setGlobalCodeTable(_cpEncoding);
+    bytes += generator.setGlobalCodeTable(_codeTableName);
     bytes += generator.row([
       PosColumn(width: 1),
       PosColumn(
@@ -270,7 +287,7 @@ class MostbytePrint {
       required List<Map<String, dynamic>> orders}) async {
     final generator = await _createGenerator();
     List<int> bytes = [];
-    bytes += generator.setGlobalCodeTable(_cpEncoding);
+    bytes += generator.setGlobalCodeTable(_codeTableName);
     bytes += generator.textEncoded(await getEncoded("Счет №: $orderId"),
         styles: const PosStyles(
             align: PosAlign.center,
@@ -326,7 +343,7 @@ class MostbytePrint {
     final generator = await _createGenerator();
     List<int> bytes = [];
 
-    bytes += generator.setGlobalCodeTable(_cpEncoding);
+    bytes += generator.setGlobalCodeTable(_codeTableName);
     bytes += generator.textEncoded(await getEncoded("ID смены: ${shift.id}"));
     bytes += generator.textEncoded(
         await getEncoded("Филиал: ${shift.user?.filial?.name_ru ?? ''}"));
@@ -483,12 +500,12 @@ class MostbytePrint {
 
     final lines = _wrap(companyName, maxCharsPerLine);
 
-    bytes += generator.setGlobalCodeTable(_cpEncoding);
+    bytes += generator.setGlobalCodeTable(_codeTableName);
     for (final raw in lines) {
       final padded = _padCenter(_sanitize(raw), maxCharsPerLine);
 
       List<int> encodedBytes =
-          await CharsetConverter.encode(_cpEncoding, padded);
+          await CharsetConverter.encode(_charsetName, padded);
 
       Uint8List encoded = Uint8List.fromList(encodedBytes);
 
@@ -661,12 +678,12 @@ class MostbytePrint {
         "Итого: ${formattedNumber(double.parse(((allSum - discount + tableTotalPrice) / 100).toStringAsFixed(2)).round() * 100)}",
         maxCharsPerLine);
 
-    bytes += generator.setGlobalCodeTable(_cpEncoding);
+    bytes += generator.setGlobalCodeTable(_codeTableName);
     for (final raw in line) {
       final padded = _padCenter(_sanitize(raw), maxCharsPerLine);
 
       List<int> encodedBytes =
-          await CharsetConverter.encode(_cpEncoding, padded);
+          await CharsetConverter.encode(_charsetName, padded);
 
       Uint8List encoded = Uint8List.fromList(encodedBytes);
 
@@ -857,7 +874,7 @@ class MostbytePrint {
   }
 
   Future<Uint8List> getEncoded(String text) async {
-    final encoded = await CharsetConverter.encode(_cpEncoding, text);
+    final encoded = await CharsetConverter.encode(_charsetName, text);
     return encoded;
   }
 
