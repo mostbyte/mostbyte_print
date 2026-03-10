@@ -49,10 +49,11 @@ class _MyHomePageState extends State<MyHomePage> {
     // Ensure that you are calling services only from the main isolate
     // If needed, wrap your isolate function within the `compute` function.
     var mostbytePrint = MostbytePrint(
-        connectionType: ConnectionType.usb,
-        ip: "XP-58C",
-        name: 'XP-58C',
-        paperSize: PaperSize.mm58);
+        connectionType: ConnectionType.network,
+        ip: "192.168.5.156",
+        name: 'printer',
+        paperSize: PaperSize.mm80,
+        profileName: 'RP80USE');
     var sss = await mostbytePrint.testTicket();
     var ticket = await mostbytePrint.generateReciept(
         orderType: "in_place",
@@ -66,7 +67,7 @@ class _MyHomePageState extends State<MyHomePage> {
         orders: [
           {"name": "adsfasf", "price": 5000, "amount": 4.6, "isVisible": true},
           {
-            "name": "adsfas23f",
+            "name": "фывафыовлдар фыв",
             "price": 4000,
             "amount": 2.6,
             "isVisible": true

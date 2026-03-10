@@ -85,6 +85,9 @@ Future<SendPort> _helperIsolateSendPort = () async {
   // We receive two types of messages:
   // 1. A port to send messages on.
   // 2. Responses to requests we sent.
+  // NOTE: This ReceivePort is intentionally long-lived (singleton pattern via
+  // lazy _helperIsolateSendPort). It must stay open for the app's lifetime to
+  // continue receiving responses from the helper isolate. Do NOT close it.
   final ReceivePort receivePort = ReceivePort()
     ..listen((dynamic data) {
       if (data is SendPort) {
@@ -104,18 +107,24 @@ Future<SendPort> _helperIsolateSendPort = () async {
 
   // Start the helper isolate.
   await Isolate.spawn((SendPort sendPort) async {
+    // NOTE: This ReceivePort is intentionally long-lived (singleton pattern).
+    // It must stay open for the helper isolate's lifetime. Do NOT close it.
     final ReceivePort helperReceivePort = ReceivePort()
       ..listen((dynamic data) {
         // On the helper isolate listen to requests and respond to them.
         if (data is _PrintRequest) {
           Pointer<Utf16> name = data.printerName.toNativeUtf16();
-
           final Pointer<Uint8> dataPtr =
               convertListIntToPointerUint8(data.data);
-          final int result = _bindings.sendPrintReq(dataPtr, data.length, name);
-          final _PrintResponse response = _PrintResponse(data.id, result);
-          sendPort.send(response);
-          calloc.free(dataPtr);
+          try {
+            final int result =
+                _bindings.sendPrintReq(dataPtr, data.length, name);
+            final _PrintResponse response = _PrintResponse(data.id, result);
+            sendPort.send(response);
+          } finally {
+            calloc.free(dataPtr);
+            calloc.free(name);
+          }
           return;
         }
         throw UnsupportedError('Unsupported message type: ${data.runtimeType}');

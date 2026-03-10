@@ -14,62 +14,84 @@ import 'package:mostbyte_print/esc_pos/esc_pos_utils_plus.dart';
 import 'package:intl/intl.dart';
 import 'package:image/image.dart';
 import 'package:win32/win32.dart';
-import './usb_esc_printer_windows.dart' as usb_esc_printer_windows;
 
 import './models/data_models/data_models.dart';
 
 class MostbytePrint {
+  static const String _cpEncoding = 'CP866';
+  static const List<int> _escReset = [0x1B, 0x40];
+  static const List<int> _cutCommand = [0x1D, 0x56, 0x00];
+
   ConnectionType connectionType;
   PaperSize paperSize;
   String ip;
   String name;
   CapabilityProfile? profile;
+  String profileName;
 
-  /// Кодировка для кириллицы.
-  /// По умолчанию `auto` - автоматически определяется на основе имени принтера.
-  /// Для RONGTA автоматически выбирается CP1251.
-  CyrillicEncoding cyrillicEncoding;
-
-  /// Кэшированная реальная кодировка (определённая из auto или заданная явно)
-  CyrillicEncoding? _resolvedEncoding;
-
-  MostbytePrint({
-    required this.ip,
-    this.connectionType = ConnectionType.network,
-    required this.name,
-    this.paperSize = PaperSize.mm80,
-    this.profile,
-    this.cyrillicEncoding = CyrillicEncoding.auto,
-  });
-
-  /// Возвращает реальную кодировку (разрешает auto в конкретное значение)
-  CyrillicEncoding get resolvedEncoding {
-    if (_resolvedEncoding != null) return _resolvedEncoding!;
-
-    if (cyrillicEncoding == CyrillicEncoding.auto) {
-      // Определяем на основе имени принтера и профиля
-      _resolvedEncoding = detectBestEncoding(
-        profile?.name ?? name,
-        name,
-      );
-    } else {
-      _resolvedEncoding = cyrillicEncoding;
-    }
-
-    return _resolvedEncoding!;
-  }
+  MostbytePrint(
+      {required this.ip,
+      this.connectionType = ConnectionType.network,
+      required this.name,
+      this.paperSize = PaperSize.mm80,
+      this.profile,
+      this.profileName = 'default'});
 
   NumberFormat numberFormatter = NumberFormat("#,##0", "en_US");
   String formattedNumber(double number) {
     return numberFormatter.format(number).replaceAll(',', ' ');
   }
 
+  int get _maxCharsPerLine => paperSize.value == PaperSize.mm58.value ? 32 : 40;
+
+  Future<Generator> _createGenerator() async {
+    final profile1 = await CapabilityProfile.load(name: profileName);
+    return Generator(paperSize, profile ?? profile1);
+  }
+
+  static List<String> _wrap(String s, int max) {
+    final words = s.split(RegExp(r'\s+'));
+    final lines = <String>[];
+    var buf = '';
+    for (final w in words) {
+      if (buf.isEmpty) {
+        buf = w;
+      } else if ((buf.length + 1 + w.length) <= max) {
+        buf = '$buf $w';
+      } else {
+        lines.add(buf);
+        buf = w;
+      }
+    }
+    if (buf.isNotEmpty) lines.add(buf);
+    return lines;
+  }
+
+  static String _padCenter(String line, int width) {
+    if (line.length >= width) return line;
+    final left = ((width - line.length) / 2).floor();
+    return ' ' * left + line;
+  }
+
+  static String _sanitize(String s) => s
+      .replaceAll('\u00A0', ' ')
+      .replaceAll(RegExp(r'[\u0000-\u001F\u007F]'), '');
+
   Future<List<int>> testTicket() async {
-    final profile1 = await CapabilityProfile.load();
-    final generator = Generator(paperSize, profile ?? profile1);
+    final generator = await _createGenerator();
+    final now = DateFormat('yyyy-MM-dd HH:mm:ss').format(DateTime.now());
     List<int> bytes = [];
+    bytes += generator.setGlobalCodeTable(_cpEncoding);
     bytes +=
-        generator.text('Test page', styles: const PosStyles(), linesAfter: 1);
+        generator.text('Test page', styles: const PosStyles(align: PosAlign.center, bold: true, height: PosTextSize.size2, width: PosTextSize.size2), linesAfter: 1);
+    bytes += generator.hr();
+    bytes += generator.textEncoded(await getEncoded('Printer: $name'));
+    bytes += generator.textEncoded(await getEncoded('IP: $ip'));
+    bytes += generator.text('Profile: $profileName');
+    bytes += generator.text('Connection: ${connectionType.name}');
+    bytes += generator.text('Paper: ${paperSize == PaperSize.mm58 ? "58mm" : "80mm"}');
+    bytes += generator.textEncoded(await getEncoded('Date: $now'));
+    bytes += generator.hr();
     bytes += generator.cut();
     return bytes;
   }
@@ -137,16 +159,15 @@ class MostbytePrint {
     required String time,
     bool isSound = true,
   }) async {
-    final profile1 = await CapabilityProfile.load();
-    final generator = Generator(paperSize, profile ?? profile1);
+    final generator = await _createGenerator();
     List<int> bytes = [];
-    bytes += generator.setGlobalCodeTable(codeTableName);
+    bytes += generator.setGlobalCodeTable(_cpEncoding);
     bytes += generator.row([
       PosColumn(width: 1),
       PosColumn(
           textEncoded: await getEncoded(
             "Ваш номер очереди",
-          ), //companyName
+          ),
           styles: const PosStyles(
             align: PosAlign.center,
             width: PosTextSize.size1,
@@ -156,11 +177,10 @@ class MostbytePrint {
           width: 11)
     ]);
 
-    // bytes += generator.reset();
     bytes += generator.row([
       PosColumn(width: 1),
       PosColumn(
-          textEncoded: await getEncoded("$orderNum"),
+          textEncoded: await getEncoded(orderNum.toString()),
           styles: const PosStyles(
               align: PosAlign.center,
               width: PosTextSize.size5,
@@ -180,7 +200,7 @@ class MostbytePrint {
             bold: false),
       ),
       PosColumn(
-          textEncoded: await getEncoded("$user"),
+          textEncoded: await getEncoded(user),
           styles: const PosStyles(
               align: PosAlign.left,
               width: PosTextSize.size1,
@@ -201,7 +221,7 @@ class MostbytePrint {
       ),
       PosColumn(
           textEncoded: await getEncoded(
-              "${type == "slow" ? "Обычная процедура" : "Быстрая процедура"}"),
+              type == "slow" ? "Обычная процедура" : "Быстрая процедура"),
           styles: const PosStyles(
               align: PosAlign.left,
               width: PosTextSize.size1,
@@ -243,16 +263,14 @@ class MostbytePrint {
       required String currentTime,
       bool isSound = true,
       required List<Map<String, dynamic>> orders}) async {
-    final profile1 = await CapabilityProfile.load();
-    final generator = Generator(paperSize, profile ?? profile1);
+    final generator = await _createGenerator();
     List<int> bytes = [];
-    bytes += generator.setGlobalCodeTable(codeTableName);
+    bytes += generator.setGlobalCodeTable(_cpEncoding);
     bytes += generator.textEncoded(await getEncoded("Счет №: $orderId"),
         styles: const PosStyles(
             align: PosAlign.center,
             width: PosTextSize.size1,
             height: PosTextSize.size1));
-    // bytes += generator.reset();
     bytes += generator.textEncoded(await getEncoded("Сотрудник: $employee"));
     bytes += generator.textEncoded(await getEncoded("Отдел: $department"));
     bytes +=
@@ -261,7 +279,7 @@ class MostbytePrint {
     for (Map<String, dynamic> orderItem in orders) {
       bytes += generator.row([
         PosColumn(
-          textEncoded: await getEncoded("${orderItem["name"]}"),
+          textEncoded: await getEncoded(orderItem["name"]),
           width: 9,
         ),
         PosColumn(
@@ -269,8 +287,6 @@ class MostbytePrint {
           width: 3,
         )
       ]);
-      // bytes += generator.textEncoded(await getEncoded(orderItem),
-      //     styles: const PosStyles(bold: true));
     }
     bytes += generator.hr();
     bytes += generator.reset();
@@ -302,20 +318,17 @@ class MostbytePrint {
     bool isSound = true,
   }) async {
     Shift shift = Shift.fromJson(shiftData);
-    final profile1 = await CapabilityProfile.load();
-    final generator = Generator(paperSize, profile ?? profile1);
+    final generator = await _createGenerator();
     List<int> bytes = [];
 
-    bytes += generator.setGlobalCodeTable(codeTableName);
-
-    // Header
+    bytes += generator.setGlobalCodeTable(_cpEncoding);
     bytes += generator.textEncoded(await getEncoded("ID смены: ${shift.id}"));
-    bytes += generator.textEncoded(
-        await getEncoded("Филиал: ${shift.user?.filial?.name_ru ?? ''}"));
-    bytes += generator.textEncoded(
-        await getEncoded("Начало: ${_formatShiftDate(shift.openedAt)}"));
-    bytes += generator.textEncoded(
-        await getEncoded("Конец: ${_formatShiftDate(shift.closedAt)}"));
+    bytes += generator
+        .textEncoded(await getEncoded("Филиал: ${shift.user.filial?.name_ru ?? ''}"));
+    bytes +=
+        generator.textEncoded(await getEncoded("Начало: ${shift.openedAt}"));
+    bytes +=
+        generator.textEncoded(await getEncoded("Конец: ${shift.closedAt}"));
     bytes += generator.textEncoded(await getEncoded(
         "Ответственный: ${shift.user?.surname ?? ''} ${shift.user?.firstname ?? ''}"));
     bytes += generator.hr();
@@ -425,7 +438,7 @@ class MostbytePrint {
     return bytes;
   }
 
-  Future<List<int>> generateReciept(
+  Future<List<int>> generateReceipt(
       {required String companyName,
       String? comment,
       required int orderId,
@@ -454,53 +467,18 @@ class MostbytePrint {
                 : 1) *
             tablePrice)
         : 0;
-    // tableTotalPrice =
-    //     double.parse((tableTotalPrice / 100).toStringAsFixed(2)).round() * 100;
-    final profile1 = await CapabilityProfile.load();
-    final generator = Generator(paperSize, profile ?? profile1);
+    final generator = await _createGenerator();
     List<int> bytes = [];
-    int maxCharsPerLine = paperSize.value == PaperSize.mm58.value ? 32 : 40;
+    int maxCharsPerLine = _maxCharsPerLine;
 
-    // --- 1. Split the text into lines that fit printer width ---
-    List<String> wrap(String s, int max) {
-      final words = s.split(RegExp(r'\s+'));
-      final lines = <String>[];
-      var buf = '';
-      for (final w in words) {
-        if (buf.isEmpty) {
-          buf = w;
-        } else if ((buf.length + 1 + w.length) <= max) {
-          buf = '$buf $w';
-        } else {
-          lines.add(buf);
-          buf = w;
-        }
-      }
-      if (buf.isNotEmpty) lines.add(buf);
-      return lines;
-    }
+    final lines = _wrap(companyName, maxCharsPerLine);
 
-    String padCenter(String line, int width) {
-      if (line.length >= width) return line;
-      final left = ((width - line.length) / 2).floor();
-      return ' ' * left + line; // pad with spaces on the left
-    }
-
-    String sanitize(String s) => s
-        .replaceAll('\u00A0', ' ') // NBSP -> space
-        .replaceAll(RegExp(r'[\u0000-\u001F\u007F]'), '');
-
-    final lines = wrap(companyName, maxCharsPerLine);
-
-    bytes += generator.setGlobalCodeTable(codeTableName);
+    bytes += generator.setGlobalCodeTable(_cpEncoding);
     for (final raw in lines) {
-      final padded = padCenter(sanitize(raw), maxCharsPerLine);
+      final padded = _padCenter(_sanitize(raw), maxCharsPerLine);
 
-      // Encode text using selected Cyrillic encoding
-      List<int> encodedBytes =
-          await CharsetConverter.encode(resolvedEncoding.charsetName, padded);
+      List<int> encodedBytes = await CharsetConverter.encode(_cpEncoding, padded);
 
-      // ✅ Convert to Uint8List before passing to textEncoded
       Uint8List encoded = Uint8List.fromList(encodedBytes);
 
       bytes.addAll(generator.textEncoded(
@@ -510,7 +488,6 @@ class MostbytePrint {
           bold: true,
           width: PosTextSize.size1,
           height: PosTextSize.size2,
-          // codeTable: PosCodeTable.pc866_cyrillic,
         ),
       ));
     }
@@ -524,22 +501,22 @@ class MostbytePrint {
     bytes += generator.hr();
     bytes += generator.reset();
     bytes += generator.textEncoded(await getEncoded("Тип счета: $orderType"),
-        styles: const PosStyles(align: PosAlign.left)); //reciept type
+        styles: const PosStyles(align: PosAlign.left));
     bytes += generator.textEncoded(await getEncoded("Распечатано: $time"),
-        styles: const PosStyles(align: PosAlign.left)); //print
+        styles: const PosStyles(align: PosAlign.left));
     if (createdAt != null) {
       bytes += generator.textEncoded(await getEncoded("Начало: $createdAt"),
-          styles: const PosStyles(align: PosAlign.left)); //print
+          styles: const PosStyles(align: PosAlign.left));
     }
     if (closedAt != null) {
       bytes += generator.textEncoded(await getEncoded("Конец: $closedAt"),
-          styles: const PosStyles(align: PosAlign.left)); //print
+          styles: const PosStyles(align: PosAlign.left));
     }
     bytes += generator
-        .textEncoded(await getEncoded("Ответственный: $employee")); // emopoyee
+        .textEncoded(await getEncoded("Ответственный: $employee"));
     if (comment != null && comment.isNotEmpty) {
       bytes += generator
-          .textEncoded(await getEncoded("Коммент: ${comment}")); // comment
+          .textEncoded(await getEncoded("Коммент: $comment"));
     }
     bytes += generator.hr();
     for (Map<String, dynamic> orderItem in orders) {
@@ -564,12 +541,10 @@ class MostbytePrint {
           width: paperSize.value == PaperSize.mm58.value ? 6 : 4,
         ),
         PosColumn(
-          text: "${formattedNumber(orderItem["amount"] * orderItem["price"])}",
+          text: formattedNumber(orderItem["amount"] * orderItem["price"]),
           width: paperSize.value == PaperSize.mm58.value ? 5 : 4,
         )
       ]);
-      // bytes += generator.textEncoded(await getEncoded(orderItem),
-      //     styles: const PosStyles(bold: true));
     }
 
     if (tableName != null &&
@@ -590,11 +565,11 @@ class MostbytePrint {
           width: paperSize.value == PaperSize.mm58.value ? 1 : 4,
         ),
         PosColumn(
-          text: "${hours ?? 1}:${minutes} * ${formattedNumber(tablePrice)}",
+          text: "${hours ?? 1}:$minutes * ${formattedNumber(tablePrice)}",
           width: paperSize.value == PaperSize.mm58.value ? 6 : 4,
         ),
         PosColumn(
-          text: "${formattedNumber(tableTotalPrice)}",
+          text: formattedNumber(tableTotalPrice),
           width: paperSize.value == PaperSize.mm58.value ? 5 : 4,
         )
       ]);
@@ -609,7 +584,7 @@ class MostbytePrint {
         ),
         PosColumn(
           textEncoded: await getEncoded(
-              "${formattedNumber(allSum * percent / (100 + percent))}"),
+              formattedNumber(allSum * percent / (100 + percent))),
           width: 3,
         )
       ]);
@@ -621,7 +596,7 @@ class MostbytePrint {
       ),
       PosColumn(
         textEncoded:
-            await getEncoded("${formattedNumber(allSum + tableTotalPrice)}"),
+            await getEncoded(formattedNumber(allSum + tableTotalPrice)),
         width: 3,
       )
     ]);
@@ -631,7 +606,7 @@ class MostbytePrint {
         width: 9,
       ),
       PosColumn(
-        textEncoded: await getEncoded("${formattedNumber(cash)}"),
+        textEncoded: await getEncoded(formattedNumber(cash)),
         width: 3,
       )
     ]);
@@ -642,7 +617,7 @@ class MostbytePrint {
           width: 9,
         ),
         PosColumn(
-          textEncoded: await getEncoded("${formattedNumber(terminal)}"),
+          textEncoded: await getEncoded(formattedNumber(terminal)),
           width: 3,
         )
       ]);
@@ -654,7 +629,7 @@ class MostbytePrint {
           width: 9,
         ),
         PosColumn(
-          textEncoded: await getEncoded("${formattedNumber(transferByCard)}"),
+          textEncoded: await getEncoded(formattedNumber(transferByCard)),
           width: 3,
         )
       ]);
@@ -666,26 +641,22 @@ class MostbytePrint {
           width: 9,
         ),
         PosColumn(
-          textEncoded: await getEncoded("${formattedNumber(discount)}"),
+          textEncoded: await getEncoded(formattedNumber(discount)),
           width: 3,
         )
       ]);
     }
-    // bytes += generator.reset();
     maxCharsPerLine = paperSize.value == PaperSize.mm58.value ? 17 : 25;
-    final line = wrap(
+    final line = _wrap(
         "Итого: ${formattedNumber(double.parse(((allSum - discount + tableTotalPrice) / 100).toStringAsFixed(2)).round() * 100)}",
         maxCharsPerLine);
 
-    bytes += generator.setGlobalCodeTable(codeTableName);
+    bytes += generator.setGlobalCodeTable(_cpEncoding);
     for (final raw in line) {
-      final padded = padCenter(sanitize(raw), maxCharsPerLine);
+      final padded = _padCenter(_sanitize(raw), maxCharsPerLine);
 
-      // Encode text using selected Cyrillic encoding
-      List<int> encodedBytes =
-          await CharsetConverter.encode(resolvedEncoding.charsetName, padded);
+      List<int> encodedBytes = await CharsetConverter.encode(_cpEncoding, padded);
 
-      // ✅ Convert to Uint8List before passing to textEncoded
       Uint8List encoded = Uint8List.fromList(encodedBytes);
 
       bytes.addAll(generator.textEncoded(
@@ -695,34 +666,15 @@ class MostbytePrint {
           bold: true,
           width: PosTextSize.size2,
           height: PosTextSize.size2,
-          // codeTable: PosCodeTable.pc866_cyrillic,
         ),
       ));
     }
-    // bytes += generator.row([
-    //   PosColumn(
-    //       textEncoded: await getEncoded(
-    //           // "Итого: ${formattedNumber(allSum - discount + tableTotalPrice)}"), //companyName
-    //           ), //companyName
-    //       styles: const PosStyles(
-    //           align: PosAlign.center,
-    //           width: PosTextSize.size2,
-    //           height: PosTextSize.size2,
-    //           bold: true),
-    //       width: 12)
-    // ]);
 
     bytes += generator.feed(2);
     if (barcodeImg != null) {
       bytes += generator.imageRaster(barcodeImg, align: PosAlign.center);
     }
-    // bytes += generator.barcode(
-    //     width: 150,
-    //     Barcode.code128("{B $orderId".split("")),
-    //     height: 50,
-    //     align: PosAlign.center);
 
-    // bytes += generator.feed(2);
     bytes += generator.cut();
     bytes += generator.drawer();
     if (isSound) {
@@ -730,6 +682,56 @@ class MostbytePrint {
     }
     bytes += generator.reset();
     return bytes;
+  }
+
+  @Deprecated('Use generateReceipt instead')
+  Future<List<int>> generateReciept(
+      {required String companyName,
+      String? comment,
+      required int orderId,
+      required int orderNum,
+      required String employee,
+      required String time,
+      required double allSum,
+      required double cash,
+      required double terminal,
+      required double transferByCard,
+      required double discount,
+      required double percent,
+      required String orderType,
+      bool isSound = true,
+      Image? barcodeImg,
+      int? hours,
+      int? minutes,
+      double? tablePrice,
+      String? tableName,
+      String? createdAt,
+      String? closedAt,
+      required List<Map<String, dynamic>> orders}) {
+    return generateReceipt(
+      companyName: companyName,
+      comment: comment,
+      orderId: orderId,
+      orderNum: orderNum,
+      employee: employee,
+      time: time,
+      allSum: allSum,
+      cash: cash,
+      terminal: terminal,
+      transferByCard: transferByCard,
+      discount: discount,
+      percent: percent,
+      orderType: orderType,
+      isSound: isSound,
+      barcodeImg: barcodeImg,
+      hours: hours,
+      minutes: minutes,
+      tablePrice: tablePrice,
+      tableName: tableName,
+      createdAt: createdAt,
+      closedAt: closedAt,
+      orders: orders,
+    );
   }
 
   void printRawData(String printerName, List<int> data) {
@@ -745,66 +747,74 @@ class MostbytePrint {
       return;
     }
 
-    // 2. Start document
+    // 2. Start document — store native string pointers so they can be freed
+    final pDocName = 'ESC/POS RAW Document'.toNativeUtf16();
+    final pDatatype = 'RAW'.toNativeUtf16();
     final docInfo = calloc<DOC_INFO_1>()
-      ..ref.pDocName = 'ESC/POS RAW Document'.toNativeUtf16()
+      ..ref.pDocName = pDocName
       ..ref.pOutputFile = nullptr
-      ..ref.pDatatype = 'RAW'.toNativeUtf16();
+      ..ref.pDatatype = pDatatype;
 
     if (StartDocPrinter(phPrinter.value, 1, docInfo) == 0) {
       print('Failed to start document: ${GetLastError()}');
       ClosePrinter(phPrinter.value);
       calloc.free(printerNamePtr);
       calloc.free(phPrinter);
+      calloc.free(pDocName);
+      calloc.free(pDatatype);
       calloc.free(docInfo);
       return;
     }
 
-    StartPagePrinter(phPrinter.value);
+    Pointer<Uint8>? lpData;
+    Pointer<Uint32>? bytesWritten;
+    try {
+      StartPagePrinter(phPrinter.value);
 
-    // 3. Send RAW content
-    final lpData = calloc<Uint8>(data.length);
-    for (var i = 0; i < data.length; i++) {
-      lpData[i] = data[i];
+      // 3. Send RAW content
+      lpData = calloc<Uint8>(data.length);
+      for (var i = 0; i < data.length; i++) {
+        lpData[i] = data[i];
+      }
+
+      bytesWritten = calloc<Uint32>();
+      WritePrinter(phPrinter.value, lpData, data.length, bytesWritten);
+
+      print('Print completed!');
+    } finally {
+      // 4. End print job
+      EndPagePrinter(phPrinter.value);
+      EndDocPrinter(phPrinter.value);
+      ClosePrinter(phPrinter.value);
+
+      // 5. Cleanup
+      calloc.free(printerNamePtr);
+      calloc.free(phPrinter);
+      if (lpData != null) calloc.free(lpData);
+      if (bytesWritten != null) calloc.free(bytesWritten);
+      calloc.free(pDocName);
+      calloc.free(pDatatype);
+      calloc.free(docInfo);
     }
-
-    final bytesWritten = calloc<Uint32>();
-    WritePrinter(phPrinter.value, lpData, data.length, bytesWritten);
-
-    // 4. End print job
-    EndPagePrinter(phPrinter.value);
-    EndDocPrinter(phPrinter.value);
-    ClosePrinter(phPrinter.value);
-
-    // 5. Cleanup
-    calloc.free(printerNamePtr);
-    calloc.free(phPrinter);
-    calloc.free(lpData);
-    calloc.free(bytesWritten);
-    calloc.free(docInfo);
-
-    print('Print completed!');
   }
 
   Future<bool> printTicket(List<int> ticket) async {
     final stopwatch = Stopwatch()..start();
     if (connectionType == ConnectionType.usb) {
       try {
-        final escReset = [0x1B, 0x40]; // ESC @ reset
-        final cut = [0x1D, 0x56, 0x00];
-
-        final data = [...escReset, ...ticket, ...cut];
+        final data = [..._escReset, ...ticket, ..._cutCommand];
         printRawData(ip, data);
         stopwatch.stop();
         print(
             'Время выполнения не print $ip :${stopwatch.elapsedMilliseconds} мс');
-      } catch (e) {
+        return true;
+      } catch (e, st) {
         stopwatch.stop();
         print(
             'Время выполнения не print $ip :${stopwatch.elapsedMilliseconds} мс');
-        print('Ошибка при печати по USB: $e');
+        print('Ошибка при печати по USB: $e\n$st');
+        return false;
       }
-      return true;
     } else if (connectionType == ConnectionType.network) {
       final printer = PrinterNetworkManager(ip);
 
@@ -816,13 +826,18 @@ class MostbytePrint {
           'Время выполнения подключения с $ip :${stopwatch.elapsedMilliseconds} мс');
       stopwatch.start();
       if (connect == PosPrintResult.success) {
-        PosPrintResult printing = await printer.printTicket(ticket);
+        try {
+          PosPrintResult printing = await printer.printTicket(ticket);
 
+          stopwatch.stop();
+          print(
+              'Время выполнения print $ip :${stopwatch.elapsedMilliseconds} мс');
+          return printing.msg == "Success" ? true : false;
+        } finally {
+          printer.disconnect();
+        }
+      } else {
         printer.disconnect();
-        stopwatch.stop();
-        print(
-            'Время выполнения print $ip :${stopwatch.elapsedMilliseconds} мс');
-        return printing.msg == "Success" ? true : false;
       }
     }
     stopwatch.stop();
@@ -831,8 +846,7 @@ class MostbytePrint {
   }
 
   Future<Uint8List> getEncoded(String text) async {
-    final encoded =
-        await CharsetConverter.encode(resolvedEncoding.charsetName, text);
+    final encoded = await CharsetConverter.encode(_cpEncoding, text);
     return encoded;
   }
 
