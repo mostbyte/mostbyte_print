@@ -523,7 +523,7 @@ void main() {
       expect(shift.closedAt, '2024-01-15 18:00:00');
       expect(shift.earned, isNotNull);
       expect(shift.earned!.closed.sum, 5000.0);
-      expect(shift.user.firstname, 'John');
+      expect(shift.user?.firstname, 'John');
     });
 
     test('fromJson parses shift without earned data', () {
@@ -564,10 +564,10 @@ void main() {
       );
       final shift = Shift.fromJson(json);
 
-      expect(shift.user.firstname, 'Alice');
-      expect(shift.user.surname, 'Wonder');
-      expect(shift.user.filial, isNotNull);
-      expect(shift.user.filial!.name_ru, 'Центральный');
+      expect(shift.user?.firstname, 'Alice');
+      expect(shift.user?.surname, 'Wonder');
+      expect(shift.user?.filial, isNotNull);
+      expect(shift.user?.filial!.name_ru, 'Центральный');
     });
   });
 }
