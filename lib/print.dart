@@ -76,9 +76,19 @@ class MostbytePrint {
 
   Future<List<int>> testTicket() async {
     final generator = await _createGenerator();
+    final now = DateFormat('yyyy-MM-dd HH:mm:ss').format(DateTime.now());
     List<int> bytes = [];
+    bytes += generator.setGlobalCodeTable(_cpEncoding);
     bytes +=
-        generator.text('Test page', styles: const PosStyles(), linesAfter: 1);
+        generator.text('Test page', styles: const PosStyles(align: PosAlign.center, bold: true, height: PosTextSize.size2, width: PosTextSize.size2), linesAfter: 1);
+    bytes += generator.hr();
+    bytes += generator.textEncoded(await getEncoded('Printer: $name'));
+    bytes += generator.textEncoded(await getEncoded('IP: $ip'));
+    bytes += generator.text('Profile: $profileName');
+    bytes += generator.text('Connection: ${connectionType.name}');
+    bytes += generator.text('Paper: ${paperSize == PaperSize.mm58 ? "58mm" : "80mm"}');
+    bytes += generator.textEncoded(await getEncoded('Date: $now'));
+    bytes += generator.hr();
     bytes += generator.cut();
     return bytes;
   }
