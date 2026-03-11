@@ -15,7 +15,7 @@ extension CyrillicEncodingExtension on CyrillicEncoding {
   String get codeTableName {
     switch (this) {
       case CyrillicEncoding.auto:
-        return 'CP1251'; // fallback — works on most common printers
+        return 'CP866'; // fallback — most universally supported
       case CyrillicEncoding.cp866:
         return 'CP866';
       case CyrillicEncoding.cp1251:
@@ -27,7 +27,7 @@ extension CyrillicEncodingExtension on CyrillicEncoding {
   String get charsetName {
     switch (this) {
       case CyrillicEncoding.auto:
-        return 'windows-1251'; // fallback — works on most common printers
+        return 'CP866'; // fallback — most universally supported
       case CyrillicEncoding.cp866:
         return 'CP866';
       case CyrillicEncoding.cp1251:
@@ -43,28 +43,26 @@ CyrillicEncoding cyrillicEncodingFromString(String value) {
   );
 }
 
-/// Профили/производители которые используют CP866
-const Set<String> _cp866Profiles = {
-  'default',    // Epson-совместимые
-  'TM-T88II',
-  'TM-T88III',
-  'TM-T88IV',
-  'TM-T88V',
+/// Профили/производители которые используют CP1251
+const Set<String> _cp1251Profiles = {
+  'RP80USE',
+  'RP328',
+  'RP326',
 };
 
-/// Определяет лучшую кодировку на основе имени профиля
-/// Большинство дешевых принтеров (Rongta, Zjiang, Xprinter) работают с CP1251
-/// Epson принтеры работают с CP866
+/// Определяет лучшую кодировку на основе имени профиля.
+/// CP866 — наиболее универсальная кодировка, поддерживается большинством принтеров.
+/// CP1251 — специфична для Rongta и некоторых других принтеров.
 CyrillicEncoding detectBestEncoding(String? profileName, String? vendor) {
   final profileLower = profileName?.toLowerCase() ?? '';
 
-  // Epson и совместимые — CP866
-  for (final p in _cp866Profiles) {
+  // Rongta принтеры — CP1251
+  for (final p in _cp1251Profiles) {
     if (profileLower == p.toLowerCase()) {
-      return CyrillicEncoding.cp866;
+      return CyrillicEncoding.cp1251;
     }
   }
 
-  // Все остальные (Rongta, Xprinter, Zjiang и т.д.) — CP1251
-  return CyrillicEncoding.cp1251;
+  // Все остальные (Epson, Xprinter, Zjiang, generic и т.д.) — CP866
+  return CyrillicEncoding.cp866;
 }

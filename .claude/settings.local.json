@@ -2,7 +2,10 @@
   "permissions": {
     "allow": [
       "Bash(cd \"F:\\\\flutter projects\\\\print_reciept\" && flutter test 2>&1)",
-      "mcp__plugin_context7_context7__resolve-library-id"
+      "mcp__plugin_context7_context7__resolve-library-id",
+      "Bash(grep \"\\\\\"vendor\\\\\":\" \"F:\\\\flutter projects\\\\print_reciept\\\\lib\\\\esc_pos\\\\resources\\\\capabilities.json\" | sed 's/.*\"vendor\": \"//' | sed 's/\".*//' | sort | uniq -c)",
+      "Bash(cd \"F:\\\\flutter projects\\\\print_reciept\" && flutter analyze lib/print.dart lib/enums/cyrillic_encoding.dart 2>&1)",
+      "Bash(cd \"F:\\\\flutter projects\\\\print_reciept\" && flutter analyze lib/ 2>&1)"
     ]
   }
 }

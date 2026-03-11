@@ -19,7 +19,6 @@ import './models/data_models/data_models.dart';
 
 class MostbytePrint {
   static const List<int> _escReset = [0x1B, 0x40];
-  static const List<int> _cutCommand = [0x1D, 0x56, 0x00];
 
   ConnectionType connectionType;
   PaperSize paperSize;
@@ -35,7 +34,7 @@ class MostbytePrint {
       required this.name,
       this.paperSize = PaperSize.mm80,
       this.profile,
-      this.profileName = 'RP80USE',
+      this.profileName = 'default',
       this.cyrillicEncoding = CyrillicEncoding.auto});
 
   /// Code table name for ESC/POS command (e.g. 'CP866', 'CP1251')
@@ -830,7 +829,7 @@ class MostbytePrint {
     final stopwatch = Stopwatch()..start();
     if (connectionType == ConnectionType.usb) {
       try {
-        final data = [..._escReset, ...ticket, ..._cutCommand];
+        final data = [..._escReset, ...ticket];
         printRawData(ip, data);
         stopwatch.stop();
         print(
