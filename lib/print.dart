@@ -1,6 +1,7 @@
 library print;
 
 export 'package:mostbyte_print/enums/cyrillic_encoding.dart';
+export 'package:mostbyte_print/enums/printer_profile.dart';
 
 import 'dart:ffi';
 import 'dart:typed_data';
@@ -10,6 +11,7 @@ import 'package:ffi/ffi.dart';
 import 'package:flutter_esc_pos_network/flutter_esc_pos_network.dart';
 import 'package:mostbyte_print/enums/connection_type.dart';
 import 'package:mostbyte_print/enums/cyrillic_encoding.dart';
+import 'package:mostbyte_print/enums/printer_profile.dart';
 import 'package:mostbyte_print/esc_pos/esc_pos_utils_plus.dart';
 import 'package:intl/intl.dart';
 import 'package:image/image.dart';
@@ -35,7 +37,12 @@ class MostbytePrint {
       this.paperSize = PaperSize.mm80,
       this.profile,
       this.profileName = 'default',
-      this.cyrillicEncoding = CyrillicEncoding.auto});
+      PrinterVendor? vendor,
+      this.cyrillicEncoding = CyrillicEncoding.auto}) {
+    if (vendor != null) {
+      profileName = vendor.profileName;
+    }
+  }
 
   /// Code table name for ESC/POS command (e.g. 'CP866', 'CP1251')
   String get _codeTableName {
