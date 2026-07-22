@@ -493,6 +493,7 @@ class MostbytePrint {
       String? tableName,
       String? createdAt,
       String? closedAt,
+      String? flagName,
       required List<Map<String, dynamic>> orders}) async {
     double tableTotalPrice = tablePrice != null
         ? ((hours != null
@@ -532,6 +533,15 @@ class MostbytePrint {
         width: 11,
       )
     ]);
+    if (flagName != null && flagName.isNotEmpty) {
+      bytes += generator.row([
+        PosColumn(width: 1),
+        PosColumn(
+          textEncoded: await getEncoded("Меню: $flagName"),
+          width: 11,
+        )
+      ]);
+    }
     bytes += generator.hr();
     bytes += generator.reset();
     bytes += generator.textEncoded(await getEncoded("Тип счета: $orderType"),
@@ -741,6 +751,7 @@ class MostbytePrint {
       String? tableName,
       String? createdAt,
       String? closedAt,
+      String? flagName,
       required List<Map<String, dynamic>> orders}) {
     return generateReceipt(
       companyName: companyName,
@@ -764,6 +775,7 @@ class MostbytePrint {
       tableName: tableName,
       createdAt: createdAt,
       closedAt: closedAt,
+      flagName: flagName,
       orders: orders,
     );
   }
