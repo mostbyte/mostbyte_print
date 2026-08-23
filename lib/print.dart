@@ -370,7 +370,8 @@ class MostbytePrint {
       final closedTotal = earned.closed.sum;
       final closedCash = closedTotal -
           earned.closed.terminal -
-          earned.closed.transferByCard;
+          earned.closed.transferByCard -
+          earned.closed.bankTransfer;
       bytes += generator.textEncoded(await getEncoded("СУММА К СДАЧЕ"),
           linesAfter: 1);
       bytes += generator.textEncoded(
@@ -379,6 +380,8 @@ class MostbytePrint {
           "Терминал: ${formattedNumber(earned.closed.terminal)}"));
       bytes += generator.textEncoded(await getEncoded(
           "Перевод: ${formattedNumber(earned.closed.transferByCard)}"));
+      bytes += generator.textEncoded(await getEncoded(
+          "Перечисление: ${formattedNumber(earned.closed.bankTransfer)}"));
 
       bytes += generator.textEncoded(
           await getEncoded("Итого: ${formattedNumber(closedTotal)}"));
@@ -404,8 +407,10 @@ class MostbytePrint {
       // Open orders section (Остаток в кассе / Незакрытые) - та же
       // раскладка: open.sum уже включает терминал и перевод.
       final openTotal = earned.open.sum;
-      final openCash =
-          openTotal - earned.open.terminal - earned.open.transferByCard;
+      final openCash = openTotal -
+          earned.open.terminal -
+          earned.open.transferByCard -
+          earned.open.bankTransfer;
       bytes += generator.textEncoded(await getEncoded("ОСТАТОК В КАССЕ"),
           linesAfter: 1);
       bytes += generator.textEncoded(
@@ -414,6 +419,8 @@ class MostbytePrint {
           "Терминал: ${formattedNumber(earned.open.terminal)}"));
       bytes += generator.textEncoded(await getEncoded(
           "Перевод: ${formattedNumber(earned.open.transferByCard)}"));
+      bytes += generator.textEncoded(await getEncoded(
+          "Перечисление: ${formattedNumber(earned.open.bankTransfer)}"));
 
       bytes += generator.textEncoded(
           await getEncoded("Итого: ${formattedNumber(openTotal)}"));
@@ -422,8 +429,10 @@ class MostbytePrint {
       // Prepayment section
       if (earned.prepayment != null) {
         final prepay = earned.prepayment!;
-        final prepayTotal =
-            prepay.cash + prepay.terminal + prepay.transferByCard;
+        final prepayTotal = prepay.cash +
+            prepay.terminal +
+            prepay.transferByCard +
+            prepay.bankTransfer;
         if (prepayTotal > 0) {
           bytes += generator.textEncoded(await getEncoded("ПРЕДОПЛАТЫ"),
               linesAfter: 1);
@@ -433,6 +442,8 @@ class MostbytePrint {
               "Терминал: ${formattedNumber(prepay.terminal)}"));
           bytes += generator.textEncoded(await getEncoded(
               "Перевод: ${formattedNumber(prepay.transferByCard)}"));
+          bytes += generator.textEncoded(await getEncoded(
+              "Перечисление: ${formattedNumber(prepay.bankTransfer)}"));
           bytes += generator.textEncoded(
               await getEncoded("Итого: ${formattedNumber(prepayTotal)}"));
           bytes += generator.hr();
@@ -445,8 +456,10 @@ class MostbytePrint {
         // Здесь наоборот: кассир вбивает наличные отдельным полем `sum`,
         // терминал и перевод - своими, поэтому итог складывается.
         final currentCash = current.sum;
-        final currentTotal =
-            current.sum + current.terminal + current.transferByCard;
+        final currentTotal = current.sum +
+            current.terminal +
+            current.transferByCard +
+            current.bankTransfer;
         bytes += generator.textEncoded(await getEncoded("ФАКТ. СУММА В КАССЕ"),
             linesAfter: 1);
         bytes += generator.textEncoded(
@@ -455,6 +468,8 @@ class MostbytePrint {
             await getEncoded("Терминал: ${formattedNumber(current.terminal)}"));
         bytes += generator.textEncoded(await getEncoded(
             "Перевод: ${formattedNumber(current.transferByCard)}"));
+        bytes += generator.textEncoded(await getEncoded(
+            "Перечисление: ${formattedNumber(current.bankTransfer)}"));
         bytes += generator.textEncoded(
             await getEncoded("Итого: ${formattedNumber(currentTotal)}"));
         bytes += generator.hr();
@@ -489,6 +504,7 @@ class MostbytePrint {
       required double cash,
       required double terminal,
       required double transferByCard,
+      double bankTransfer = 0,
       required double discount,
       required double percent,
       required String orderType,
@@ -684,6 +700,18 @@ class MostbytePrint {
         )
       ]);
     }
+    if (bankTransfer > 0) {
+      bytes += generator.row([
+        PosColumn(
+          textEncoded: await getEncoded("Перечисление:"),
+          width: 9,
+        ),
+        PosColumn(
+          textEncoded: await getEncoded(formattedNumber(bankTransfer)),
+          width: 3,
+        )
+      ]);
+    }
     if (discount > 0) {
       bytes += generator.row([
         PosColumn(
@@ -747,6 +775,7 @@ class MostbytePrint {
       required double cash,
       required double terminal,
       required double transferByCard,
+      double bankTransfer = 0,
       required double discount,
       required double percent,
       required String orderType,
@@ -771,6 +800,7 @@ class MostbytePrint {
       cash: cash,
       terminal: terminal,
       transferByCard: transferByCard,
+      bankTransfer: bankTransfer,
       discount: discount,
       percent: percent,
       orderType: orderType,
