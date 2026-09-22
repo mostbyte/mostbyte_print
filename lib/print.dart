@@ -329,12 +329,14 @@ class MostbytePrint {
     return bytes;
   }
 
-  /// Format ISO date string to readable format
+  /// Приводит ISO-дату (бэк отдаёт её в UTC) к локальному времени кассы.
+  /// Формат совпадает с DateFormatter.dateDotTimeFormat в приложении order,
+  /// которым отформатирована строка времени печати внизу чека.
   String _formatShiftDate(String? isoDate) {
     if (isoDate == null || isoDate.isEmpty) return '';
     try {
       final dateTime = DateTime.parse(isoDate).toLocal();
-      return DateFormat('dd.MM.yyyy HH:mm').format(dateTime);
+      return DateFormat('dd.MM.yyyy HH:mm:ss').format(dateTime);
     } catch (e) {
       return isoDate;
     }
@@ -353,10 +355,10 @@ class MostbytePrint {
     bytes += generator.textEncoded(await getEncoded("ID смены: ${shift.id}"));
     bytes += generator.textEncoded(
         await getEncoded("Филиал: ${shift.user?.filial?.name_ru ?? ''}"));
-    bytes +=
-        generator.textEncoded(await getEncoded("Начало: ${shift.openedAt}"));
-    bytes +=
-        generator.textEncoded(await getEncoded("Конец: ${shift.closedAt}"));
+    bytes += generator.textEncoded(
+        await getEncoded("Начало: ${_formatShiftDate(shift.openedAt)}"));
+    bytes += generator.textEncoded(
+        await getEncoded("Конец: ${_formatShiftDate(shift.closedAt)}"));
     bytes += generator.textEncoded(await getEncoded(
         "Ответственный: ${shift.user?.surname ?? ''} ${shift.user?.firstname ?? ''}"));
     bytes += generator.hr();
@@ -398,32 +400,75 @@ class MostbytePrint {
       bytes += generator.textEncoded(
           await getEncoded("Возвраты: ${formattedNumber(earned.refund.sum)}"));
 
+      // Вычеты разнородны: расход (wasted) всегда наличный (у Waste нет
+      // разбивки по оплате), а возврат закрывается тем же сплитом, что и
+      // обычный заказ, - у него есть terminal/transfer_by_card/bank_transfer.
+      // Берём в "Ушло из кассы" только наличную часть возврата, иначе
+      // безналичный возврат печатался бы как недостача в кассе - тот же
+      // обман, что и старый "ОСТАТОК В КАССЕ".
+      final refundCash = earned.refund.sum -
+          earned.refund.terminal -
+          earned.refund.transferByCard -
+          earned.refund.bankTransfer;
+      final cashOutTotal = refundCash + earned.wasted;
+      final notReceivedTotal = earned.discount + earned.debt;
+      // ЧИСТАЯ ВЫРУЧКА считается от полных сумм: независимо от способа
+      // оплаты возврат одинаково уменьшает выручку смены, поэтому здесь
+      // используется earned.refund.sum целиком, а не наличная часть.
       final deductionsTotal =
           earned.discount + earned.debt + earned.wasted + earned.refund.sum;
       bytes += generator.textEncoded(await getEncoded(
-          "Итого вычетов: ${formattedNumber(deductionsTotal)}"));
+          "Ушло из кассы: ${formattedNumber(cashOutTotal)}"));
+      bytes += generator.textEncoded(await getEncoded(
+          "Недополучено: ${formattedNumber(notReceivedTotal)}"));
       bytes += generator.hr();
 
-      // Open orders section (Остаток в кассе / Незакрытые) - та же
-      // раскладка: open.sum уже включает терминал и перевод.
-      final openTotal = earned.open.sum;
-      final openCash = openTotal -
-          earned.open.terminal -
-          earned.open.transferByCard -
+      // Open orders section (Незакрытые заказы). Счёт ещё не оплачен, поэтому
+      // разбивка по видам оплаты тут не значима - важен возраст: сколько
+      // открыто в эту смену, а сколько висит с прошлых (именно старые
+      // зависшие заказы месяцами искажали этот блок чека). carried_over -
+      // справочная величина, в ЧИСТУЮ ВЫРУЧКУ и вычеты не входит.
+      //
+      // Если бэк ещё не прислал carried_over (старая версия pos_order),
+      // разбивку по возрасту не печатаем вовсе - earned.open по старой
+      // логике включает вообще все незакрытые заказы филиала, и подписанная
+      // "Эта смена" строка с этой суммой будет враньём того же рода, какое
+      // мы чиним. Печатаем один общий итог без обещания разбивки.
+      final openThisShift = earned.open.sum;
+      // Безналичная часть незакрытых заказов - деньги, которые уже прошли
+      // через терминал/перевод/перечисление, но в СУММУ К СДАЧЕ не попали,
+      // т.к. счёт не закрыт. Без этой строки управляющий не сводит Z-отчёт
+      // терминала с чеком смены. Считается только из open, если carried_over
+      // не пришёл от бэка - те же соображения, что и для остальной разбивки.
+      final openNonCash = earned.open.terminal +
+          earned.open.transferByCard +
           earned.open.bankTransfer;
-      bytes += generator.textEncoded(await getEncoded("ОСТАТОК В КАССЕ"),
+      var nonCashTotal = openNonCash;
+      bytes += generator.textEncoded(await getEncoded("НЕЗАКРЫТЫЕ ЗАКАЗЫ"),
           linesAfter: 1);
+      if (earned.carriedOver != null) {
+        final carriedOverSum = earned.carriedOver!.sum;
+        nonCashTotal += earned.carriedOver!.terminal +
+            earned.carriedOver!.transferByCard +
+            earned.carriedOver!.bankTransfer;
+        // Короткие подписи не случайны: на 58-мм ленте (32 символа) полное
+        // "Висят с прошлых смен: " не оставляет места для суммы в сотни
+        // миллионов - именно такие суммы и накапливаются в carried_over.
+        bytes += generator.textEncoded(await getEncoded(
+            "Эта смена: ${formattedNumber(openThisShift)}"));
+        bytes += generator.textEncoded(await getEncoded(
+            "С прошлых смен: ${formattedNumber(carriedOverSum)}"));
+        bytes += generator.textEncoded(await getEncoded(
+            "Итого: ${formattedNumber(openThisShift + carriedOverSum)}"));
+      } else {
+        bytes += generator.textEncoded(
+            await getEncoded("Итого: ${formattedNumber(openThisShift)}"));
+      }
+      // Печатается всегда, даже при нуле - по тому же принципу, что и
+      // остальные суммовые строки чека (см. "Терминал: 0" выше): ноль -
+      // это тоже информация, а не повод молчать про строку.
       bytes += generator.textEncoded(
-          await getEncoded("Наличка: ${formattedNumber(openCash)}"));
-      bytes += generator.textEncoded(await getEncoded(
-          "Терминал: ${formattedNumber(earned.open.terminal)}"));
-      bytes += generator.textEncoded(await getEncoded(
-          "Перевод: ${formattedNumber(earned.open.transferByCard)}"));
-      bytes += generator.textEncoded(await getEncoded(
-          "Перечисление: ${formattedNumber(earned.open.bankTransfer)}"));
-
-      bytes += generator.textEncoded(
-          await getEncoded("Итого: ${formattedNumber(openTotal)}"));
+          await getEncoded("в т.ч. безналом: ${formattedNumber(nonCashTotal)}"));
       bytes += generator.hr();
 
       // Prepayment section
