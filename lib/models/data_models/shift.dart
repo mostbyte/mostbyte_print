@@ -30,6 +30,6 @@ class Shift {
         "user": user?.toJson(),
         "opened_at": openedAt,
         "closed_at": closedAt,
-        "earned": earned,
+        "earned": earned?.toJson(),
       };
 }

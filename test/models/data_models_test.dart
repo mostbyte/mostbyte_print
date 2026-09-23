@@ -92,18 +92,26 @@ Map<String, dynamic> buildEarnedJson({
   Map<String, dynamic>? closed,
   Map<String, dynamic>? open,
   Map<String, dynamic>? refund,
+  Map<String, dynamic>? carriedOver,
   double debt = 100.0,
   double discount = 50.0,
   double wasted = 200.0,
-}) =>
-    {
-      'closed': closed ?? buildEarnedDataJson(sum: 5000, terminal: 2000),
-      'open': open ?? buildEarnedDataJson(sum: 3000, terminal: 1000),
-      'refund': refund ?? buildEarnedDataJson(sum: 500, terminal: 100),
-      'debt': debt,
-      'discount': discount,
-      'wasted': wasted,
-    };
+}) {
+  final json = {
+    'closed': closed ?? buildEarnedDataJson(sum: 5000, terminal: 2000),
+    'open': open ?? buildEarnedDataJson(sum: 3000, terminal: 1000),
+    'refund': refund ?? buildEarnedDataJson(sum: 500, terminal: 100),
+    'debt': debt,
+    'discount': discount,
+    'wasted': wasted,
+  };
+  // carried_over добавляем только если передали явно - так проверяется и
+  // парсинг ответа старого бэка без этого ключа.
+  if (carriedOver != null) {
+    json['carried_over'] = carriedOver;
+  }
+  return json;
+}
 
 Map<String, dynamic> buildShiftJson({
   int id = 1,
@@ -323,6 +331,36 @@ void main() {
       expect(earned.closed.sum, 5000.0);
       expect(earned.open.terminal, 1000.0);
       expect(earned.refund.sum, 500.0);
+    });
+
+    test('fromJson оставляет carriedOver null, когда carried_over отсутствует (старый бэк)', () {
+      // Null, а не ноль: ноль означал бы, что мы посчитали разбивку по
+      // возрасту и она нулевая, а на деле бэк её вообще не прислал.
+      final json = buildEarnedJson();
+      final earned = Earned.fromJson(json);
+
+      expect(earned.carriedOver, isNull);
+    });
+
+    test('fromJson parses carried_over when present', () {
+      final json = buildEarnedJson(
+        carriedOver: buildEarnedDataJson(sum: 6241271, terminal: 0),
+      );
+      final earned = Earned.fromJson(json);
+
+      expect(earned.carriedOver, isNotNull);
+      expect(earned.carriedOver!.sum, 6241271.0);
+    });
+
+    test('toJson includes carried_over key when present, null when absent', () {
+      final withCarry = Earned.fromJson(buildEarnedJson(
+        carriedOver: buildEarnedDataJson(sum: 777, terminal: 0),
+      )).toJson();
+      expect(withCarry['carried_over'], isA<Map<String, dynamic>>());
+      expect(withCarry['carried_over']['sum'], 777.0);
+
+      final withoutCarry = Earned.fromJson(buildEarnedJson()).toJson();
+      expect(withoutCarry['carried_over'], isNull);
     });
 
     test('fromJson defaults closed/open/refund when null', () {
