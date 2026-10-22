@@ -45,6 +45,8 @@ Map<String, dynamic> _buildShiftData({
   // Ключи размена: null - нет ключа (старая смена или старый бэк).
   Map<String, dynamic>? openingCashJson,
   Map<String, dynamic>? cashBalanceJson,
+  // null: ключа debt_repayment нет (старая смена или старый бэк).
+  Map<String, dynamic>? debtRepaymentJson,
 }) {
   final earned = <String, dynamic>{
     // Закрытые заказы - реально принятые деньги.
@@ -62,6 +64,7 @@ Map<String, dynamic> _buildShiftData({
   }
   if (openingCashJson != null) earned['opening_cash'] = openingCashJson;
   if (cashBalanceJson != null) earned['cash_balance'] = cashBalanceJson;
+  if (debtRepaymentJson != null) earned['debt_repayment'] = debtRepaymentJson;
   if (carriedOverJson != null) {
     // Висят с прошлых смен.
     earned['carried_over'] = carriedOverJson;
@@ -476,6 +479,67 @@ void main() {
       expect(lines, isNotEmpty);
       for (final l in lines) {
         expect(l.runes.length, lessThanOrEqualTo(32), reason: l);
+      }
+    });
+
+    test('ПОГАШЕНИЯ ДОЛГОВ: ненулевые способы, строка в наличных, 58 мм', () async {
+      final narrow =
+          MostbytePrint(ip: '127.0.0.1', name: 'T', paperSize: PaperSize.mm58);
+      final bytes = await narrow.generateShift(
+        shiftData: _buildShiftData(
+          debtRepaymentJson: {
+            'cash': 999999999999,
+            'terminal': 0,
+            'transfer_by_card': 0,
+            'bank_transfer': 999999999999,
+            'count': 2,
+          },
+          cashBalanceJson: {
+            'opening': 0,
+            'expected': 999999999999,
+            'left_for_next': 0,
+            'debt_repayment_cash': 999999999999,
+          },
+        ),
+        time: '15.01.2024 18:00:00',
+      );
+      final text = receiptText(bytes);
+      expect(text, contains('ПОГАШЕНИЯ ДОЛГОВ'));
+      final start = text.indexOf('ПОГАШЕНИЯ ДОЛГОВ');
+      final end = text.indexOf('ВЫЧЕТЫ');
+      final section = text.substring(start, end);
+      expect(section, contains('Наличка: 999 999 999 999'));
+      expect(section, contains('Перечисление: 999 999 999 999'));
+      expect(section, isNot(contains('Терминал')));
+      expect(section, isNot(contains('Перевод')));
+      expect(text, contains('в т.ч. погаш.: 999 999 999 999'));
+      // Выручка и закрытые не затронуты.
+      expect(text.indexOf('СУММА К СДАЧЕ'), lessThan(start));
+      final lines = [
+        ...section.split(RegExp(r'[\n\r]')),
+        ...text
+            .substring(text.indexOf('НАЛИЧНЫЕ В КАССЕ'))
+            .split(RegExp(r'[\n\r]'))
+            .where((l) => l.contains('в т.ч.')),
+      ]
+          .map((l) => l.replaceFirst(RegExp(r'^[^А-Яа-я]*'), ''))
+          .where((l) => l.contains(':'));
+      expect(lines, isNotEmpty);
+      for (final l in lines) {
+        expect(l.runes.length, lessThanOrEqualTo(32), reason: l);
+      }
+    });
+
+    test('ПОГАШЕНИЯ ДОЛГОВ: без ключа или при count 0 раздела нет', () async {
+      for (final json in <Map<String, dynamic>?>[
+        null,
+        {'cash': 0, 'terminal': 0, 'transfer_by_card': 0, 'bank_transfer': 0, 'count': 0},
+      ]) {
+        final bytes = await printer.generateShift(
+          shiftData: _buildShiftData(debtRepaymentJson: json),
+          time: '15.01.2024 18:00:00',
+        );
+        expect(receiptText(bytes), isNot(contains('ПОГАШЕНИЯ ДОЛГОВ')));
       }
     });
 
