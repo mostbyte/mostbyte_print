@@ -18,6 +18,10 @@ class Earned {
   double wasted;
   PrepaymentData? prepayment;
   EarnedData? currentAmount;
+  // Счета смены, закрытые из админки: {count, sum}. null - ключа нет
+  // (старая смена или старый бэк), строку на чеке не печатаем.
+  int? closedByOthersCount;
+  double? closedByOthersSum;
 
   Earned({
     required this.closed,
@@ -29,6 +33,8 @@ class Earned {
     required this.wasted,
     this.prepayment,
     this.currentAmount,
+    this.closedByOthersCount,
+    this.closedByOthersSum,
   });
 
   factory Earned.fromJson(Map<String, dynamic> json) {
@@ -43,6 +49,8 @@ class Earned {
         currentAmountData = EarnedData.fromJson(currentAmountJson);
       }
     }
+
+    final byOthers = json["closed_by_others"];
 
     return Earned(
       closed: EarnedData.fromJson(json["closed"] ?? {}),
@@ -59,6 +67,10 @@ class Earned {
           ? PrepaymentData.fromJson(json["prepayment"])
           : null,
       currentAmount: currentAmountData,
+      closedByOthersCount:
+          byOthers is Map ? (byOthers["count"] ?? 0).toInt() : null,
+      closedByOthersSum:
+          byOthers is Map ? (byOthers["sum"] ?? 0).toDouble() : null,
     );
   }
 
@@ -72,5 +84,8 @@ class Earned {
         "wasted": wasted,
         "prepayment": prepayment?.toJson(),
         "current_amount": currentAmount?.toJson(),
+        "closed_by_others": closedByOthersCount == null
+            ? null
+            : {"count": closedByOthersCount, "sum": closedByOthersSum ?? 0},
       };
 }

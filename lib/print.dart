@@ -387,6 +387,11 @@ class MostbytePrint {
 
       bytes += generator.textEncoded(
           await getEncoded("Итого: ${formattedNumber(closedTotal)}"));
+      // Справочно: часть закрытых счетов закрыта не кассиром, а из админки.
+      if ((earned.closedByOthersCount ?? 0) > 0) {
+        bytes += generator.textEncoded(await getEncoded(
+            "из них закрыто из админки: ${earned.closedByOthersCount}, ${formattedNumber(earned.closedByOthersSum ?? 0)}"));
+      }
       bytes += generator.hr();
 
       // Deductions section
