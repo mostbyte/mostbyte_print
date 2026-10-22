@@ -22,6 +22,10 @@ class Earned {
   // (старая смена или старый бэк), строку на чеке не печатаем.
   int? closedByOthersCount;
   double? closedByOthersSum;
+  // Размен: ключей нет у старых смен и старого бэка, раздел на чеке не печатаем.
+  OpeningCash? openingCash;
+  LeftForNext? leftForNext;
+  CashBalance? cashBalance;
 
   Earned({
     required this.closed,
@@ -35,6 +39,9 @@ class Earned {
     this.currentAmount,
     this.closedByOthersCount,
     this.closedByOthersSum,
+    this.openingCash,
+    this.leftForNext,
+    this.cashBalance,
   });
 
   factory Earned.fromJson(Map<String, dynamic> json) {
@@ -71,6 +78,15 @@ class Earned {
           byOthers is Map ? (byOthers["count"] ?? 0).toInt() : null,
       closedByOthersSum:
           byOthers is Map ? (byOthers["sum"] ?? 0).toDouble() : null,
+      openingCash: json["opening_cash"] is Map<String, dynamic>
+          ? OpeningCash.fromJson(json["opening_cash"])
+          : null,
+      leftForNext: json["left_for_next"] is Map<String, dynamic>
+          ? LeftForNext.fromJson(json["left_for_next"])
+          : null,
+      cashBalance: json["cash_balance"] is Map<String, dynamic>
+          ? CashBalance.fromJson(json["cash_balance"])
+          : null,
     );
   }
 
@@ -87,5 +103,89 @@ class Earned {
         "closed_by_others": closedByOthersCount == null
             ? null
             : {"count": closedByOthersCount, "sum": closedByOthersSum ?? 0},
+        "opening_cash": openingCash?.toJson(),
+        "left_for_next": leftForNext?.toJson(),
+        "cash_balance": cashBalance?.toJson(),
+      };
+}
+
+double? _toDoubleOrNull(dynamic v) => v == null ? null : (v as num).toDouble();
+
+/// Начальный остаток смены. source: carried | auto | manual | none.
+class OpeningCash {
+  final double amount;
+  final String source;
+  final double? leftAmount;
+
+  OpeningCash({required this.amount, this.source = 'none', this.leftAmount});
+
+  factory OpeningCash.fromJson(Map<String, dynamic> json) => OpeningCash(
+        amount: (json["amount"] ?? 0).toDouble(),
+        source: (json["source"] ?? 'none').toString(),
+        leftAmount: _toDoubleOrNull(json["left_amount"]),
+      );
+
+  Map<String, dynamic> toJson() =>
+      {"amount": amount, "source": source, "left_amount": leftAmount};
+}
+
+/// Размен, оставленный следующей смене. acceptedAmount null - ещё не принят.
+class LeftForNext {
+  final double amount;
+  final double? acceptedAmount;
+
+  LeftForNext({required this.amount, this.acceptedAmount});
+
+  factory LeftForNext.fromJson(Map<String, dynamic> json) {
+    final accepted = json["accepted"];
+    return LeftForNext(
+      amount: (json["amount"] ?? 0).toDouble(),
+      acceptedAmount:
+          accepted is Map ? _toDoubleOrNull(accepted["amount"]) : null,
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+        "amount": amount,
+        "accepted":
+            acceptedAmount == null ? null : {"amount": acceptedAmount},
+      };
+}
+
+/// Сверка наличных смены (считает сервер). actual/difference/handedOver
+/// null, пока суммы не введены.
+class CashBalance {
+  final double opening;
+  final double expected;
+  final double? actual;
+  final double? difference;
+  final double leftForNext;
+  final double? handedOver;
+
+  CashBalance({
+    required this.opening,
+    required this.expected,
+    this.actual,
+    this.difference,
+    this.leftForNext = 0,
+    this.handedOver,
+  });
+
+  factory CashBalance.fromJson(Map<String, dynamic> json) => CashBalance(
+        opening: (json["opening"] ?? 0).toDouble(),
+        expected: (json["expected"] ?? 0).toDouble(),
+        actual: _toDoubleOrNull(json["actual"]),
+        difference: _toDoubleOrNull(json["difference"]),
+        leftForNext: (json["left_for_next"] ?? 0).toDouble(),
+        handedOver: _toDoubleOrNull(json["handed_over"]),
+      );
+
+  Map<String, dynamic> toJson() => {
+        "opening": opening,
+        "expected": expected,
+        "actual": actual,
+        "difference": difference,
+        "left_for_next": leftForNext,
+        "handed_over": handedOver,
       };
 }
