@@ -477,4 +477,45 @@ void main() {
       expect(netIdx, greaterThan(openIdx));
     });
   });
+
+  // =========================================================================
+  // generateCheck (кухонный чек)
+  // =========================================================================
+  group('generateCheck: этаж и стол', () {
+    final printer = MostbytePrint(ip: '127.0.0.1', name: 'Kitchen');
+    String text(List<int> bytes) => utf8.decode(bytes, allowMalformed: true);
+
+    Future<List<int>> check({String? floor, String? table}) =>
+        printer.generateCheck(
+          orderId: 15,
+          employee: 'Анна',
+          department: 'Кухня',
+          time: '22.10.2026 12:00:00',
+          currentTime: '22.10.2026 12:01:00',
+          floor: floor,
+          table: table,
+          isSound: false,
+          orders: [
+            {'name': 'Плов', 'amount': 2},
+          ],
+        );
+
+    test('печатает этаж и стол после номера счёта', () async {
+      final out = text(await check(floor: '2 этаж', table: 'Стол 7'));
+      final numIdx = out.indexOf('Счет №: 15');
+      final floorIdx = out.indexOf('Этаж: 2 этаж');
+      final tableIdx = out.indexOf('Стол: Стол 7');
+      expect(numIdx, isNot(-1));
+      expect(floorIdx, greaterThan(numIdx));
+      expect(tableIdx, greaterThan(floorIdx));
+      expect(out.indexOf('Отдел: Кухня'), greaterThan(tableIdx));
+    });
+
+    test('без стола и этажа строк нет (с собой, доставка)', () async {
+      final out = text(await check(floor: '  ', table: null));
+      expect(out.contains('Этаж:'), isFalse);
+      expect(out.contains('Стол:'), isFalse);
+      expect(out.contains('Плов'), isTrue);
+    });
+  });
 }
