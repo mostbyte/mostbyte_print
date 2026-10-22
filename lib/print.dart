@@ -290,6 +290,8 @@ class MostbytePrint {
       required String time,
       required String currentTime,
       bool isSound = true,
+      String? floor,
+      String? table,
       required List<Map<String, dynamic>> orders}) async {
     final generator = await _createGenerator();
     List<int> bytes = [];
@@ -299,6 +301,16 @@ class MostbytePrint {
             align: PosAlign.center,
             width: PosTextSize.size1,
             height: PosTextSize.size1));
+    // Этаж и стол крупно: повар и официант ищут по ним, куда нести заказ.
+    if (floor != null && floor.trim().isNotEmpty) {
+      bytes += generator.textEncoded(await getEncoded("Этаж: ${floor.trim()}"),
+          styles: const PosStyles(bold: true));
+    }
+    if (table != null && table.trim().isNotEmpty) {
+      bytes += generator.textEncoded(await getEncoded("Стол: ${table.trim()}"),
+          styles: const PosStyles(
+              bold: true, width: PosTextSize.size2, height: PosTextSize.size2));
+    }
     bytes += generator.textEncoded(await getEncoded("Сотрудник: $employee"));
     bytes += generator.textEncoded(await getEncoded("Отдел: $department"));
     bytes +=
