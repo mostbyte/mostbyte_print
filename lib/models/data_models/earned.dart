@@ -26,6 +26,8 @@ class Earned {
   OpeningCash? openingCash;
   LeftForNext? leftForNext;
   CashBalance? cashBalance;
+  // Погашения долгов из админки; ключа нет у старых смен и старого бэка.
+  DebtRepayment? debtRepayment;
 
   Earned({
     required this.closed,
@@ -42,6 +44,7 @@ class Earned {
     this.openingCash,
     this.leftForNext,
     this.cashBalance,
+    this.debtRepayment,
   });
 
   factory Earned.fromJson(Map<String, dynamic> json) {
@@ -87,6 +90,9 @@ class Earned {
       cashBalance: json["cash_balance"] is Map<String, dynamic>
           ? CashBalance.fromJson(json["cash_balance"])
           : null,
+      debtRepayment: json["debt_repayment"] is Map<String, dynamic>
+          ? DebtRepayment.fromJson(json["debt_repayment"])
+          : null,
     );
   }
 
@@ -106,6 +112,40 @@ class Earned {
         "opening_cash": openingCash?.toJson(),
         "left_for_next": leftForNext?.toJson(),
         "cash_balance": cashBalance?.toJson(),
+        "debt_repayment": debtRepayment?.toJson(),
+      };
+}
+
+/// Погашения долгов из админки по способам оплаты. В выручку не входят.
+class DebtRepayment {
+  final double cash;
+  final double terminal;
+  final double transferByCard;
+  final double bankTransfer;
+  final int count;
+
+  DebtRepayment({
+    this.cash = 0,
+    this.terminal = 0,
+    this.transferByCard = 0,
+    this.bankTransfer = 0,
+    this.count = 0,
+  });
+
+  factory DebtRepayment.fromJson(Map<String, dynamic> json) => DebtRepayment(
+        cash: (json["cash"] ?? 0).toDouble(),
+        terminal: (json["terminal"] ?? 0).toDouble(),
+        transferByCard: (json["transfer_by_card"] ?? 0).toDouble(),
+        bankTransfer: (json["bank_transfer"] ?? 0).toDouble(),
+        count: (json["count"] ?? 0).toInt(),
+      );
+
+  Map<String, dynamic> toJson() => {
+        "cash": cash,
+        "terminal": terminal,
+        "transfer_by_card": transferByCard,
+        "bank_transfer": bankTransfer,
+        "count": count,
       };
 }
 
@@ -161,6 +201,8 @@ class CashBalance {
   final double? difference;
   final double leftForNext;
   final double? handedOver;
+  // Наличные погашения долгов, уже входят в expected; null у старого бэка.
+  final double? debtRepaymentCash;
 
   CashBalance({
     required this.opening,
@@ -169,6 +211,7 @@ class CashBalance {
     this.difference,
     this.leftForNext = 0,
     this.handedOver,
+    this.debtRepaymentCash,
   });
 
   factory CashBalance.fromJson(Map<String, dynamic> json) => CashBalance(
@@ -178,6 +221,7 @@ class CashBalance {
         difference: _toDoubleOrNull(json["difference"]),
         leftForNext: (json["left_for_next"] ?? 0).toDouble(),
         handedOver: _toDoubleOrNull(json["handed_over"]),
+        debtRepaymentCash: _toDoubleOrNull(json["debt_repayment_cash"]),
       );
 
   Map<String, dynamic> toJson() => {
@@ -187,5 +231,6 @@ class CashBalance {
         "difference": difference,
         "left_for_next": leftForNext,
         "handed_over": handedOver,
+        "debt_repayment_cash": debtRepaymentCash,
       };
 }

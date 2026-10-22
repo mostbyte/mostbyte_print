@@ -394,6 +394,25 @@ class MostbytePrint {
       }
       bytes += generator.hr();
 
+      // Погашения долгов из админки: не выручка, печатаем по способам.
+      final debtRepayment = earned.debtRepayment;
+      if (debtRepayment != null && debtRepayment.count > 0) {
+        bytes += generator.textEncoded(await getEncoded("ПОГАШЕНИЯ ДОЛГОВ"),
+            linesAfter: 1);
+        for (final row in [
+          ("Наличка", debtRepayment.cash),
+          ("Терминал", debtRepayment.terminal),
+          ("Перевод", debtRepayment.transferByCard),
+          ("Перечисление", debtRepayment.bankTransfer),
+        ]) {
+          if (row.$2 != 0) {
+            bytes += generator.textEncoded(
+                await getEncoded("${row.$1}: ${formattedNumber(row.$2)}"));
+          }
+        }
+        bytes += generator.hr();
+      }
+
       // Deductions section
       bytes += generator.textEncoded(await getEncoded("ВЫЧЕТЫ"), linesAfter: 1);
       bytes += generator.textEncoded(
@@ -460,6 +479,10 @@ class MostbytePrint {
           }
         }
         await line("Ожидалось: ${formattedNumber(cashBalance.expected)}");
+        if ((cashBalance.debtRepaymentCash ?? 0) > 0) {
+          await line(
+              "в т.ч. погаш.: ${formattedNumber(cashBalance.debtRepaymentCash!)}");
+        }
         if (cashBalance.actual != null) {
           await line("Факт: ${formattedNumber(cashBalance.actual!)}");
         }
