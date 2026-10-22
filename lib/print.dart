@@ -406,6 +406,25 @@ class MostbytePrint {
       }
       bytes += generator.hr();
 
+      // Погашения долгов из админки: не выручка, печатаем по способам.
+      final debtRepayment = earned.debtRepayment;
+      if (debtRepayment != null && debtRepayment.count > 0) {
+        bytes += generator.textEncoded(await getEncoded("ПОГАШЕНИЯ ДОЛГОВ"),
+            linesAfter: 1);
+        for (final row in [
+          ("Наличка", debtRepayment.cash),
+          ("Терминал", debtRepayment.terminal),
+          ("Перевод", debtRepayment.transferByCard),
+          ("Перечисление", debtRepayment.bankTransfer),
+        ]) {
+          if (row.$2 != 0) {
+            bytes += generator.textEncoded(
+                await getEncoded("${row.$1}: ${formattedNumber(row.$2)}"));
+          }
+        }
+        bytes += generator.hr();
+      }
+
       // Deductions section
       bytes += generator.textEncoded(await getEncoded("ВЫЧЕТЫ"), linesAfter: 1);
       bytes += generator.textEncoded(
@@ -439,6 +458,56 @@ class MostbytePrint {
       bytes += generator.textEncoded(await getEncoded(
           "Недополучено: ${formattedNumber(notReceivedTotal)}"));
       bytes += generator.hr();
+
+      // Сверка наличных с разменом. Печатаем только если сервер прислал
+      // cash_balance (старые смены и старый бэк его не знают).
+      final cashBalance = earned.cashBalance;
+      if (cashBalance != null) {
+        final maxChars = _maxCharsPerLine;
+        Future<void> line(String text) async {
+          bytes += generator.textEncoded(await getEncoded(text));
+        }
+
+        bytes += generator.textEncoded(await getEncoded("НАЛИЧНЫЕ В КАССЕ"),
+            linesAfter: 1);
+        await line("Нач. остаток: ${formattedNumber(cashBalance.opening)}");
+        final opening = earned.openingCash;
+        if (opening != null) {
+          if (opening.source == 'manual') {
+            await line("введён вручную");
+          } else if (opening.source == 'auto') {
+            await line("не подтверждён");
+          } else if (opening.source == 'carried' &&
+              opening.leftAmount != null) {
+            final accepted = formattedNumber(opening.amount);
+            final left = formattedNumber(opening.leftAmount!);
+            final joined = "принят $accepted из $left";
+            if (joined.length <= maxChars) {
+              await line(joined);
+            } else {
+              await line("принят $accepted");
+              await line("из $left");
+            }
+          }
+        }
+        await line("Ожидалось: ${formattedNumber(cashBalance.expected)}");
+        if ((cashBalance.debtRepaymentCash ?? 0) > 0) {
+          await line(
+              "в т.ч. погаш.: ${formattedNumber(cashBalance.debtRepaymentCash!)}");
+        }
+        if (cashBalance.actual != null) {
+          await line("Факт: ${formattedNumber(cashBalance.actual!)}");
+        }
+        if (cashBalance.difference != null) {
+          await line("Разница: ${formattedNumber(cashBalance.difference!)}");
+        }
+        await line("На размен: ${formattedNumber(cashBalance.leftForNext)}");
+        if (cashBalance.handedOver != null) {
+          await line(
+              "Сдать наличными: ${formattedNumber(cashBalance.handedOver!)}");
+        }
+        bytes += generator.hr();
+      }
 
       // Open orders section (Незакрытые заказы). Счёт ещё не оплачен, поэтому
       // разбивка по видам оплаты тут не значима - важен возраст: сколько

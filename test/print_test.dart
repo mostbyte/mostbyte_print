@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/intl.dart';
 import 'package:mostbyte_print/enums/connection_type.dart';
+import 'package:mostbyte_print/esc_pos/esc_pos_utils_plus.dart' show PaperSize;
 import 'package:mostbyte_print/print.dart';
 
 // ---------------------------------------------------------------------------
@@ -41,6 +42,11 @@ Map<String, dynamic> _buildShiftData({
   Map<String, dynamic>? carriedOverJson = _defaultCarriedOverJson,
   // null: ключа closed_by_others нет (старая смена или старый бэк).
   Map<String, dynamic>? closedByOthersJson,
+  // Ключи размена: null - нет ключа (старая смена или старый бэк).
+  Map<String, dynamic>? openingCashJson,
+  Map<String, dynamic>? cashBalanceJson,
+  // null: ключа debt_repayment нет (старая смена или старый бэк).
+  Map<String, dynamic>? debtRepaymentJson,
 }) {
   final earned = <String, dynamic>{
     // Закрытые заказы - реально принятые деньги.
@@ -56,6 +62,9 @@ Map<String, dynamic> _buildShiftData({
   if (closedByOthersJson != null) {
     earned['closed_by_others'] = closedByOthersJson;
   }
+  if (openingCashJson != null) earned['opening_cash'] = openingCashJson;
+  if (cashBalanceJson != null) earned['cash_balance'] = cashBalanceJson;
+  if (debtRepaymentJson != null) earned['debt_repayment'] = debtRepaymentJson;
   if (carriedOverJson != null) {
     // Висят с прошлых смен.
     earned['carried_over'] = carriedOverJson;
@@ -366,6 +375,172 @@ void main() {
       expect(openSection, isNot(contains('Терминал')));
       expect(openSection, isNot(contains('Перевод:')));
       expect(openSection, isNot(contains('Перечисление')));
+    });
+
+    test('НАЛИЧНЫЕ В КАССЕ: раздел есть с cash_balance, после ВЫЧЕТОВ', () async {
+      final bytes = await printer.generateShift(
+        shiftData: _buildShiftData(
+          openingCashJson: {
+            'amount': 90000,
+            'source': 'carried',
+            'left_amount': 100000
+          },
+          cashBalanceJson: {
+            'opening': 90000,
+            'sales_cash': 65000,
+            'expected': 148000,
+            'actual': 150000,
+            'difference': 2000,
+            'left_for_next': 50000,
+            'handed_over': 100000,
+          },
+        ),
+        time: '15.01.2024 18:00:00',
+      );
+      final text = receiptText(bytes);
+
+      expect(text, contains('НАЛИЧНЫЕ В КАССЕ'));
+      expect(text, contains('Нач. остаток: 90 000'));
+      expect(text, contains('принят 90 000 из 100 000'));
+      expect(text, contains('Ожидалось: 148 000'));
+      expect(text, contains('Факт: 150 000'));
+      expect(text, contains('Разница: 2 000'));
+      expect(text, contains('На размен: 50 000'));
+      expect(text, contains('Сдать наличными: 100 000'));
+      expect(text.indexOf('ВЫЧЕТЫ'),
+          lessThan(text.indexOf('НАЛИЧНЫЕ В КАССЕ')));
+      // Существующий раздел не переименован.
+      expect(text, contains('СУММА К СДАЧЕ'));
+    });
+
+    test('НАЛИЧНЫЕ В КАССЕ: без ключа раздела нет', () async {
+      final bytes = await printer.generateShift(
+        shiftData: _buildShiftData(),
+        time: '15.01.2024 18:00:00',
+      );
+      expect(receiptText(bytes), isNot(contains('НАЛИЧНЫЕ В КАССЕ')));
+    });
+
+    test('НАЛИЧНЫЕ В КАССЕ: открытая смена без факта, источники manual и auto', () async {
+      for (final entry in {
+        'manual': 'введён вручную',
+        'auto': 'не подтверждён',
+      }.entries) {
+        final bytes = await printer.generateShift(
+          shiftData: _buildShiftData(
+            openingCashJson: {'amount': 5000, 'source': entry.key},
+            cashBalanceJson: {
+              'opening': 5000,
+              'expected': 70000,
+              'actual': null,
+              'difference': null,
+              'left_for_next': 0,
+              'handed_over': null,
+            },
+          ),
+          time: '15.01.2024 18:00:00',
+        );
+        final text = receiptText(bytes);
+        expect(text, contains(entry.value));
+        expect(text, isNot(contains('Факт: ')));
+        expect(text, isNot(contains('Сдать наличными')));
+      }
+    });
+
+    test('НАЛИЧНЫЕ В КАССЕ: строки раздела укладываются в 32 символа', () async {
+      final narrow =
+          MostbytePrint(ip: '127.0.0.1', name: 'T', paperSize: PaperSize.mm58);
+      final bytes = await narrow.generateShift(
+        shiftData: _buildShiftData(
+          openingCashJson: {
+            'amount': 999999999,
+            'source': 'carried',
+            'left_amount': 999999999
+          },
+          cashBalanceJson: {
+            'opening': 999999999,
+            'expected': 999999999999,
+            'actual': 999999999999,
+            'difference': -999999999999,
+            'left_for_next': 999999999,
+            'handed_over': 999999999999,
+          },
+        ),
+        time: '15.01.2024 18:00:00',
+      );
+      final text = receiptText(bytes);
+      final start = text.indexOf('НАЛИЧНЫЕ В КАССЕ');
+      final end = text.indexOf('НЕЗАКРЫТЫЕ ЗАКАЗЫ');
+      final lines = text
+          .substring(start, end)
+          .split(RegExp(r'[\n\r]'))
+          .map((l) => l.replaceFirst(RegExp(r'^[^А-Яа-я]*'), ''))
+          .where((l) => l.contains(':') || l.contains('принят') || l.startsWith('из '));
+      expect(lines, isNotEmpty);
+      for (final l in lines) {
+        expect(l.runes.length, lessThanOrEqualTo(32), reason: l);
+      }
+    });
+
+    test('ПОГАШЕНИЯ ДОЛГОВ: ненулевые способы, строка в наличных, 58 мм', () async {
+      final narrow =
+          MostbytePrint(ip: '127.0.0.1', name: 'T', paperSize: PaperSize.mm58);
+      final bytes = await narrow.generateShift(
+        shiftData: _buildShiftData(
+          debtRepaymentJson: {
+            'cash': 999999999999,
+            'terminal': 0,
+            'transfer_by_card': 0,
+            'bank_transfer': 999999999999,
+            'count': 2,
+          },
+          cashBalanceJson: {
+            'opening': 0,
+            'expected': 999999999999,
+            'left_for_next': 0,
+            'debt_repayment_cash': 999999999999,
+          },
+        ),
+        time: '15.01.2024 18:00:00',
+      );
+      final text = receiptText(bytes);
+      expect(text, contains('ПОГАШЕНИЯ ДОЛГОВ'));
+      final start = text.indexOf('ПОГАШЕНИЯ ДОЛГОВ');
+      final end = text.indexOf('ВЫЧЕТЫ');
+      final section = text.substring(start, end);
+      expect(section, contains('Наличка: 999 999 999 999'));
+      expect(section, contains('Перечисление: 999 999 999 999'));
+      expect(section, isNot(contains('Терминал')));
+      expect(section, isNot(contains('Перевод')));
+      expect(text, contains('в т.ч. погаш.: 999 999 999 999'));
+      // Выручка и закрытые не затронуты.
+      expect(text.indexOf('СУММА К СДАЧЕ'), lessThan(start));
+      final lines = [
+        ...section.split(RegExp(r'[\n\r]')),
+        ...text
+            .substring(text.indexOf('НАЛИЧНЫЕ В КАССЕ'))
+            .split(RegExp(r'[\n\r]'))
+            .where((l) => l.contains('в т.ч.')),
+      ]
+          .map((l) => l.replaceFirst(RegExp(r'^[^А-Яа-я]*'), ''))
+          .where((l) => l.contains(':'));
+      expect(lines, isNotEmpty);
+      for (final l in lines) {
+        expect(l.runes.length, lessThanOrEqualTo(32), reason: l);
+      }
+    });
+
+    test('ПОГАШЕНИЯ ДОЛГОВ: без ключа или при count 0 раздела нет', () async {
+      for (final json in <Map<String, dynamic>?>[
+        null,
+        {'cash': 0, 'terminal': 0, 'transfer_by_card': 0, 'bank_transfer': 0, 'count': 0},
+      ]) {
+        final bytes = await printer.generateShift(
+          shiftData: _buildShiftData(debtRepaymentJson: json),
+          time: '15.01.2024 18:00:00',
+        );
+        expect(receiptText(bytes), isNot(contains('ПОГАШЕНИЯ ДОЛГОВ')));
+      }
     });
 
     test('закрытые из админки: строка под "Итого" закрытых, если count > 0', () async {
