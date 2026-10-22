@@ -39,6 +39,8 @@ Map<String, dynamic> _buildShiftData({
   Map<String, dynamic>? refundJson,
   // null означает, что бэк ключ carried_over вообще не прислал (старая версия).
   Map<String, dynamic>? carriedOverJson = _defaultCarriedOverJson,
+  // null: ключа closed_by_others нет (старая смена или старый бэк).
+  Map<String, dynamic>? closedByOthersJson,
 }) {
   final earned = <String, dynamic>{
     // Закрытые заказы - реально принятые деньги.
@@ -51,6 +53,9 @@ Map<String, dynamic> _buildShiftData({
     'debt': 2000.0,
     'wasted': 3000.0,
   };
+  if (closedByOthersJson != null) {
+    earned['closed_by_others'] = closedByOthersJson;
+  }
   if (carriedOverJson != null) {
     // Висят с прошлых смен.
     earned['carried_over'] = carriedOverJson;
@@ -361,6 +366,32 @@ void main() {
       expect(openSection, isNot(contains('Терминал')));
       expect(openSection, isNot(contains('Перевод:')));
       expect(openSection, isNot(contains('Перечисление')));
+    });
+
+    test('закрытые из админки: строка под "Итого" закрытых, если count > 0', () async {
+      final bytes = await printer.generateShift(
+        shiftData: _buildShiftData(
+            closedByOthersJson: {'count': 3, 'sum': 45000}),
+        time: '15.01.2024 18:00:00',
+      );
+      final text = receiptText(bytes);
+
+      expect(text, contains('из них закрыто из админки: 3, 45 000'));
+      expect(text.indexOf('Итого: 135 000'),
+          lessThan(text.indexOf('из них закрыто из админки')));
+    });
+
+    test('закрытые из админки: нет ключа или count = 0 - строки нет', () async {
+      for (final json in <Map<String, dynamic>?>[
+        null,
+        {'count': 0, 'sum': 0},
+      ]) {
+        final bytes = await printer.generateShift(
+          shiftData: _buildShiftData(closedByOthersJson: json),
+          time: '15.01.2024 18:00:00',
+        );
+        expect(receiptText(bytes), isNot(contains('закрыто из админки')));
+      }
     });
 
     test('отсутствие carried_over в JSON не роняет печать и не делит на два блока', () async {
